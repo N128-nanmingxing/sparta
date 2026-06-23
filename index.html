@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fbfdfc" />
+    <title>APP地址搜索工具</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="prototype-shell">
+      <aside class="desktop-brief" aria-label="原型状态说明">
+        <div class="brief-logo">官</div>
+        <p class="brief-kicker">高保真交互原型</p>
+        <h1>APP地址搜索工具</h1>
+        <p>方向 1：安全极简。输入 APP 名称，返回唯一可信的官方官网与官方下载地址。</p>
+        <a class="admin-entry" href="./admin.html">打开地址信息库后台</a>
+        <div class="brief-tests">
+          <span>微信</span>
+          <span>钉钉</span>
+          <span>app</span>
+          <span>不存在</span>
+          <span>破解</span>
+          <span>断网</span>
+          <span>失效</span>
+        </div>
+      </aside>
+
+      <main class="phone" aria-label="APP地址搜索工具原型">
+        <div class="status-bar" aria-hidden="true">
+          <span>9:41</span>
+          <span class="status-icons">5G <span class="battery"></span></span>
+        </div>
+
+        <section class="app-screen" data-route="home">
+          <header class="app-header">
+            <button class="brand-button" type="button" aria-label="返回首页">
+              <span class="brand-mark">官</span>
+            </button>
+            <span class="trust-pill">无广告 · 无盗版</span>
+          </header>
+
+          <section class="hero">
+            <h2>一键查 APP 官方地址</h2>
+            <p>输入软件名称，只展示企业官网与官方正规下载地址。</p>
+          </section>
+
+          <form class="search-card" id="searchForm" autocomplete="off">
+            <label class="sr-only" for="searchInput">请输入需要查询的APP名称</label>
+            <input id="searchInput" maxlength="30" inputmode="search" placeholder="请输入需要查询的APP名称" />
+            <button class="clear-button" id="clearButton" type="button" aria-label="清空搜索内容">×</button>
+            <button class="search-button" type="submit">搜索</button>
+          </form>
+
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          <section class="state-region" id="stateRegion" aria-live="polite"></section>
+
+          <nav class="legal-links" aria-label="合规页面">
+            <button type="button" data-page="terms">用户协议</button>
+            <button type="button" data-page="privacy">隐私政策</button>
+          </nav>
+        </section>
+
+        <section class="app-screen legal-screen" data-route="terms" hidden>
+          <header class="legal-topbar">
+            <button class="back-button" type="button" aria-label="返回">‹</button>
+            <strong>用户协议</strong>
+          </header>
+          <article class="legal-document">
+            <h2>用户协议与免责声明</h2>
+            <p>本工具仅用于检索互联网公开的官方公示链接，所有资源归属对应 APP 官方公司所有。</p>
+            <p>本软件不提供盗版、破解、内测修改版、非法工具或其他违规资源，不展示第三方平台、广告、论坛、资讯或应用商店下载链接。</p>
+            <p>用户点击外部链接后，将跳转至系统浏览器。跳转后的服务、下载、安装与使用风险由用户自行判断并承担。</p>
+            <p>系统会自动拦截赌博、色情、私服、外挂、破解、违规博彩等关键词，并持续更新合规词库。</p>
+          </article>
+        </section>
+
+        <section class="app-screen legal-screen" data-route="privacy" hidden>
+          <header class="legal-topbar">
+            <button class="back-button" type="button" aria-label="返回">‹</button>
+            <strong>隐私政策</strong>
+          </header>
+          <article class="legal-document">
+            <h2>隐私政策</h2>
+            <p>本 APP 不收集用户个人信息，不要求注册、登录、会员或付费。</p>
+            <p>本 APP 不收集设备信息、位置信息、通讯录、相机、相册、存储内容，也不进行推送触达。</p>
+            <p>搜索行为仅用于展示官方地址结果。原型中的统计事件只在本地控制台模拟，不上传个人隐私。</p>
+            <p>权限使用范围：网络权限用于接口请求和数据加载；剪贴板写入用于长按或点击复制官方链接。</p>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

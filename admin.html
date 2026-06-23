@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6faf7" />
+    <title>地址信息库后台</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body class="admin-page">
+    <main class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <span class="admin-kicker">本地后台</span>
+          <h1>APP 地址信息库</h1>
+          <p>添加、编辑和批量导入官方官网与官方下载地址。</p>
+        </div>
+        <a href="./index.html">返回搜索页</a>
+      </header>
+
+      <section class="admin-grid">
+        <form class="admin-panel app-form" id="appForm">
+          <div class="panel-title">
+            <h2 id="formTitle">新增 APP 地址</h2>
+            <button type="button" id="resetButton">清空</button>
+          </div>
+
+          <input type="hidden" id="appId" />
+
+          <label>
+            <span>APP标准名称</span>
+            <input id="name" required placeholder="例如：微信" />
+          </label>
+
+          <label>
+            <span>别名 / 英文名</span>
+            <input id="aliases" placeholder="微信;wechat;wx" />
+          </label>
+
+          <div class="form-pair">
+            <label>
+              <span>图标单字</span>
+              <input id="icon" maxlength="1" placeholder="微" />
+            </label>
+            <label>
+              <span>排序权重</span>
+              <input id="weight" type="number" min="0" max="999" value="50" />
+            </label>
+          </div>
+
+          <label>
+            <span>官方官网地址</span>
+            <input id="officialSite" type="url" placeholder="https://example.com" />
+          </label>
+
+          <label>
+            <span>安卓官方下载地址</span>
+            <input id="android" type="url" placeholder="https://example.com/android" />
+          </label>
+
+          <label>
+            <span>iOS官方下载地址</span>
+            <input id="ios" type="url" placeholder="https://apps.apple.com/..." />
+          </label>
+
+          <label class="toggle-row">
+            <input id="valid" type="checkbox" checked />
+            <span>链接有效，可在搜索页展示并点击</span>
+          </label>
+
+          <button class="primary-admin-button" type="submit">保存到信息库</button>
+          <p class="admin-message" id="formMessage" role="status"></p>
+        </form>
+
+        <section class="admin-panel import-panel">
+          <div class="panel-title">
+            <h2>CSV 批量导入</h2>
+          </div>
+          <p class="csv-help">表头固定：name,aliases,icon,officialSite,android,ios,valid,weight</p>
+          <textarea id="csvText" rows="8" spellcheck="false">name,aliases,icon,officialSite,android,ios,valid,weight
+示例APP,示例;demo,示,https://example.com,https://example.com/android,https://apps.apple.com/app/demo,true,70</textarea>
+          <div class="import-actions">
+            <label class="file-button">
+              选择CSV文件
+              <input id="csvFile" type="file" accept=".csv,text/csv" />
+            </label>
+            <button id="importButton" type="button">导入CSV</button>
+          </div>
+          <p class="admin-message" id="importMessage" role="status"></p>
+        </section>
+      </section>
+
+      <section class="admin-panel list-panel">
+        <div class="panel-title list-title">
+          <div>
+            <h2>已收录地址</h2>
+            <p id="listSummary">正在读取信息库...</p>
+          </div>
+          <div class="list-toolbar">
+            <label class="list-search">
+              <span class="sr-only">搜索后台列表</span>
+              <input id="adminSearch" placeholder="搜索名称、别名或链接" />
+            </label>
+            <button type="button" id="exportButton">导出 CSV</button>
+          </div>
+        </div>
+        <div class="app-table" id="appList"></div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/admin.js"></script>
+  </body>
+</html>
