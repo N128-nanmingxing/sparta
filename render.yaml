@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sparta
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: DATA_DIR
+        value: /var/data/sparta-data
+    disk:
+      name: sparta-data
+      mountPath: /var/data
+      sizeGB: 1

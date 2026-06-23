@@ -11,9 +11,12 @@ import { dirname, extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(root, "data");
+const dataDir = process.env.DATA_DIR
+  ? resolve(process.env.DATA_DIR)
+  : join(root, "data");
 const appsFile = join(dataDir, "apps.json");
 const preferredPort = Number(process.env.PORT || 4173);
+const host = process.env.HOST || "127.0.0.1";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -294,6 +297,15 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  if (request.method === "GET" && url.pathname === "/healthz") {
+    sendJson(response, 200, {
+      ok: true,
+      dataDir,
+      appCount: apps.length,
+    });
+    return true;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/apps/export") {
     response.writeHead(200, {
       "Content-Type": "text/csv; charset=utf-8",
@@ -427,7 +439,7 @@ function serveStatic(response, url) {
 
 function createAppServer() {
   return createServer(async (request, response) => {
-    const url = new URL(request.url || "/", "http://127.0.0.1");
+    const url = new URL(request.url || "/", `http://${host}`);
     try {
       const handled = await handleApi(request, response, url);
       if (!handled) serveStatic(response, url);
@@ -446,9 +458,9 @@ function listen(port) {
     }
     throw error;
   });
-  server.listen(port, "127.0.0.1", () => {
-    console.log(`Prototype running at http://127.0.0.1:${port}`);
-    console.log(`Admin running at http://127.0.0.1:${port}/admin.html`);
+  server.listen(port, host, () => {
+    console.log(`Prototype running at http://${host}:${port}`);
+    console.log(`Admin running at http://${host}:${port}/admin.html`);
   });
 }
 
