@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "build": "node --check src/app.js"
+    "build": "node --check server.mjs && node --check src/app.js && node --check src/admin.js"
   },
   "dependencies": {},
   "devDependencies": {}

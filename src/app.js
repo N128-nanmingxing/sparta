@@ -61,52 +61,74 @@ function setRoute(routeName) {
   }
 }
 
+function clearNode(node) {
+  node.replaceChildren();
+}
+
+function createElement(tagName, options = {}) {
+  const node = document.createElement(tagName);
+  if (options.className) node.className = options.className;
+  if (options.text) node.textContent = options.text;
+  if (options.type) node.type = options.type;
+  if (options.disabled) node.disabled = true;
+  if (options.dataset) {
+    Object.entries(options.dataset).forEach(([key, value]) => {
+      node.dataset[key] = value;
+    });
+  }
+  return node;
+}
+
 function renderInitial() {
-  elements.state.innerHTML = `
-    <div class="empty-state">
-      <div>
-        <div class="empty-mark">查</div>
-        <h3>输入APP名称，一键查询官方地址</h3>
-        <p>仅展示人工核验的官网与官方下载地址。</p>
-      </div>
-    </div>
-  `;
+  clearNode(elements.state);
+  const wrapper = createElement("div", { className: "empty-state" });
+  const inner = document.createElement("div");
+  inner.append(
+    createElement("div", { className: "empty-mark", text: "查" }),
+    createElement("h3", { text: "输入APP名称，查询已审核官方地址" }),
+    createElement("p", { text: "仅展示通过后台审核的官网与官方下载地址。" }),
+  );
+  wrapper.appendChild(inner);
+  elements.state.appendChild(wrapper);
   track("home_view");
 }
 
 function renderLoading() {
-  elements.state.innerHTML = `
-    <div class="notice-state">
-      <div>
-        <div class="loader" aria-hidden="true"></div>
-        <h3>正在检索官方地址中...</h3>
-        <p>正在过滤广告、第三方平台和失效链接。</p>
-      </div>
-    </div>
-  `;
+  clearNode(elements.state);
+  const wrapper = createElement("div", { className: "notice-state" });
+  const inner = document.createElement("div");
+  inner.append(
+    createElement("div", { className: "loader" }),
+    createElement("h3", { text: "正在检索官方地址..." }),
+    createElement("p", { text: "仅返回已审核通过的官方链接。" }),
+  );
+  wrapper.appendChild(inner);
+  elements.state.appendChild(wrapper);
 }
 
 function renderNotice({ type = "empty", mark = "查", title, body, retry = false }) {
   const className = type === "sensitive" ? "is-sensitive" : type === "error" ? "is-error" : "";
-  elements.state.innerHTML = `
-    <div class="notice-state ${className}">
-      <div>
-        <div class="notice-mark">${mark}</div>
-        <h3>${title}</h3>
-        <p>${body}</p>
-        ${retry ? '<button class="retry-button" type="button" id="retryButton">刷新</button>' : ""}
-      </div>
-    </div>
-  `;
-
-  const retryButton = document.querySelector("#retryButton");
-  if (retryButton) {
-    retryButton.addEventListener("click", () => {
-      elements.input.value = "微信";
-      updateClearButton();
-      runSearch("微信");
+  clearNode(elements.state);
+  const wrapper = createElement("div", { className: `notice-state ${className}`.trim() });
+  const inner = document.createElement("div");
+  inner.append(
+    createElement("div", { className: "notice-mark", text: mark }),
+    createElement("h3", { text: title }),
+    createElement("p", { text: body }),
+  );
+  if (retry) {
+    const retryButton = createElement("button", {
+      className: "retry-button",
+      type: "button",
+      text: "重试",
     });
+    retryButton.addEventListener("click", () => {
+      runSearch(lastQuery || elements.input.value || "微信");
+    });
+    inner.appendChild(retryButton);
   }
+  wrapper.appendChild(inner);
+  elements.state.appendChild(wrapper);
 }
 
 function linkRowsFor(item) {
@@ -135,54 +157,79 @@ function renderResults(results, query) {
     return;
   }
 
-  elements.state.innerHTML = `
-    <div class="summary-row">
-      <span>找到 ${results.length} 条官方结果</span>
-      <span>最多展示 Top5</span>
-    </div>
-    <div class="results">
-      ${results.map(renderResultCard).join("")}
-    </div>
-  `;
-
-  bindResultActions();
+  clearNode(elements.state);
+  const summary = createElement("div", { className: "summary-row" });
+  summary.append(
+    createElement("span", { text: `找到 ${results.length} 条官方结果` }),
+    createElement("span", { text: "仅展示已审核通过项" }),
+  );
+  const resultsNode = createElement("div", { className: "results" });
+  results.forEach((item) => {
+    resultsNode.appendChild(renderResultCard(item));
+  });
+  elements.state.append(summary, resultsNode);
   track("search_success", { query, count: results.length });
 }
 
 function renderResultCard(item) {
-  const linkRows = linkRowsFor(item)
-    .map((row) => {
-      const invalid = !item.valid;
-      const buttonLabel = invalid ? "失效" : row.type === "android_download" ? "复制" : "打开";
-      return `
-        <div class="link-row ${invalid ? "is-invalid" : ""}" data-url="${row.url}" data-type="${row.type}" data-valid="${item.valid}">
-          <div>
-            <p class="link-title">${row.label}</p>
-            <p class="link-url">${invalid ? "链接已失效，等待更新" : row.url}</p>
-          </div>
-          <button class="link-action" type="button" ${invalid ? "disabled" : ""}>${buttonLabel}</button>
-        </div>
-      `;
-    })
-    .join("");
+  const article = createElement("article", {
+    className: `result-card ${item.valid ? "" : "is-invalid"}`.trim(),
+  });
 
-  return `
-    <article class="result-card ${item.valid ? "" : "is-invalid"}">
-      <div class="app-head">
-        <div class="app-icon">${item.icon || item.name.slice(0, 1) || "官"}</div>
-        <div>
-          <p class="app-name">${item.name}</p>
-          <span class="badge">官方</span>
-        </div>
-        <span class="status-badge ${item.valid ? "" : "is-invalid"}">${item.valid ? "有效" : "失效"}</span>
-      </div>
-      <div class="link-panel">${linkRows}</div>
-      <div class="meta-line">
-        <span>每日凌晨自动校验</span>
-        <span>${item.valid ? "人工核验 + 自动更新" : "已自动下架"}</span>
-      </div>
-    </article>
-  `;
+  const head = createElement("div", { className: "app-head" });
+  const icon = createElement("div", {
+    className: "app-icon",
+    text: item.icon || item.name.slice(0, 1) || "官",
+  });
+  const nameWrap = document.createElement("div");
+  nameWrap.append(
+    createElement("p", { className: "app-name", text: item.name }),
+    createElement("span", { className: "badge", text: "官方" }),
+  );
+  const status = createElement("span", {
+    className: `status-badge ${item.valid ? "" : "is-invalid"}`.trim(),
+    text: item.valid ? "有效" : "失效",
+  });
+  head.append(icon, nameWrap, status);
+
+  const panel = createElement("div", { className: "link-panel" });
+  linkRowsFor(item).forEach((row) => {
+    const invalid = !item.valid;
+    const rowNode = createElement("div", {
+      className: `link-row ${invalid ? "is-invalid" : ""}`.trim(),
+      dataset: {
+        url: row.url,
+        type: row.type,
+        valid: String(item.valid),
+      },
+    });
+    const textWrap = document.createElement("div");
+    textWrap.append(
+      createElement("p", { className: "link-title", text: row.label }),
+      createElement("p", {
+        className: "link-url",
+        text: invalid ? "链接已失效，等待重新审核" : row.url,
+      }),
+    );
+    const button = createElement("button", {
+      className: "link-action",
+      type: "button",
+      text: invalid ? "失效" : row.type === "android_download" ? "复制" : "打开",
+      disabled: invalid,
+    });
+    rowNode.append(textWrap, button);
+    panel.appendChild(rowNode);
+  });
+
+  const meta = createElement("div", { className: "meta-line" });
+  meta.append(
+    createElement("span", { text: `审核状态：${item.reviewStatus === "approved" ? "已通过" : "未通过"}` }),
+    createElement("span", { text: item.reviewNote || "由后台人工审核后发布" }),
+  );
+
+  article.append(head, panel, meta);
+  bindResultActions(article);
+  return article;
 }
 
 async function copyLink(url) {
@@ -208,8 +255,8 @@ function openLink(url, type) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-function bindResultActions() {
-  document.querySelectorAll(".link-row").forEach((row) => {
+function bindResultActions(scope = document) {
+  scope.querySelectorAll(".link-row").forEach((row) => {
     const url = row.dataset.url;
     const type = row.dataset.type;
     const valid = row.dataset.valid === "true";
@@ -277,26 +324,14 @@ async function runSearch(rawQuery) {
       return;
     }
 
-    if (query.includes("断网") || query.toLowerCase().includes("network")) {
-      renderNotice({
-        type: "error",
-        mark: "网",
-        title: "网络异常，请检查网络",
-        body: "弱网或无网络时不会崩溃，可刷新后重试。",
-        retry: true,
-      });
-      track("network_error", { query });
-      return;
-    }
-
     try {
       const results = await fetchResults(query);
       if (results.length === 0) {
         renderNotice({
           type: "empty",
           mark: "空",
-          title: "未查询到该APP官方正规地址，请更换关键词重试",
-          body: "后台会统计空结果，用于补充缺失 APP 数据。",
+          title: "未查询到该APP的已审核官方地址",
+          body: "请更换关键词，或等待后台补充审核后再试。",
         });
         track("empty_result", { query });
         return;
@@ -306,8 +341,8 @@ async function runSearch(rawQuery) {
       renderNotice({
         type: "error",
         mark: "网",
-        title: "网络异常，请检查网络",
-        body: "无法连接本地信息库服务，请确认后端已启动。",
+        title: "服务暂时不可用",
+        body: "当前无法连接地址信息库，请稍后重试。",
         retry: true,
       });
       track("network_error", { query });

@@ -10,12 +10,18 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 24
+      - key: NODE_ENV
+        value: production
       - key: HOST
         value: 0.0.0.0
       - key: PORT
         value: 10000
       - key: DATA_DIR
         value: /var/data/sparta-data
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
     disk:
       name: sparta-data
       mountPath: /var/data

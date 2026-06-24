@@ -6,10 +6,21 @@ const fields = {
   officialSite: document.querySelector("#officialSite"),
   android: document.querySelector("#android"),
   ios: document.querySelector("#ios"),
+  officialDomain: document.querySelector("#officialDomain"),
   valid: document.querySelector("#valid"),
   weight: document.querySelector("#weight"),
+  reviewStatus: document.querySelector("#reviewStatus"),
+  reviewNote: document.querySelector("#reviewNote"),
 };
 
+const authShell = document.querySelector("#authShell");
+const adminContent = document.querySelector("#adminContent");
+const loginForm = document.querySelector("#loginForm");
+const loginUsername = document.querySelector("#loginUsername");
+const loginPassword = document.querySelector("#loginPassword");
+const loginMessage = document.querySelector("#loginMessage");
+const sessionText = document.querySelector("#sessionText");
+const logoutButton = document.querySelector("#logoutButton");
 const appForm = document.querySelector("#appForm");
 const appList = document.querySelector("#appList");
 const adminSearch = document.querySelector("#adminSearch");
@@ -22,9 +33,17 @@ const csvText = document.querySelector("#csvText");
 const csvFile = document.querySelector("#csvFile");
 const listSummary = document.querySelector("#listSummary");
 const exportButton = document.querySelector("#exportButton");
+const refreshOpsButton = document.querySelector("#refreshOpsButton");
+const backupButton = document.querySelector("#backupButton");
+const opsCards = document.querySelector("#opsCards");
+const opsMessage = document.querySelector("#opsMessage");
+const backupMessage = document.querySelector("#backupMessage");
+const auditLog = document.querySelector("#auditLog");
 
 const hasBackend = location.protocol !== "file:";
 let apps = [];
+let currentSession = null;
+let csrfToken = "";
 
 function setMessage(node, message, type = "ok") {
   node.textContent = message;
@@ -43,9 +62,56 @@ function getPayload() {
     officialSite: fields.officialSite.value.trim(),
     android: fields.android.value.trim(),
     ios: fields.ios.value.trim(),
+    officialDomain: fields.officialDomain.value.trim(),
     valid: fields.valid.checked,
     weight: Number(fields.weight.value || 50),
+    reviewStatus: fields.reviewStatus.value,
+    reviewNote: fields.reviewNote.value.trim(),
   };
+}
+
+function clearNode(node) {
+  node.replaceChildren();
+}
+
+function createElement(tagName, options = {}) {
+  const node = document.createElement(tagName);
+  if (options.className) node.className = options.className;
+  if (options.text) node.textContent = options.text;
+  if (options.type) node.type = options.type;
+  if (options.dataset) {
+    Object.entries(options.dataset).forEach(([key, value]) => {
+      node.dataset[key] = value;
+    });
+  }
+  return node;
+}
+
+function getReviewLabel(status) {
+  if (status === "approved") return "已通过";
+  if (status === "rejected") return "已驳回";
+  return "待审核";
+}
+
+function getReviewClass(status) {
+  if (status === "approved") return "admin-review-approved";
+  if (status === "rejected") return "admin-review-rejected";
+  return "admin-review-pending";
+}
+
+function showAuthScreen() {
+  authShell.hidden = false;
+  adminContent.hidden = true;
+  currentSession = null;
+  csrfToken = "";
+}
+
+function showAdminContent(session) {
+  authShell.hidden = true;
+  adminContent.hidden = false;
+  currentSession = session;
+  csrfToken = session?.csrfToken || "";
+  sessionText.textContent = session?.username ? `当前账号：${session.username}` : "";
 }
 
 function normalizeText(value) {
@@ -79,8 +145,37 @@ function validatePayload(payload, ignoreId = "") {
     return "APP标准名称不能为空";
   }
 
+  if (!payload.officialDomain) {
+    return "请填写官方主域名";
+  }
+
   if (!payload.officialSite && !payload.android && !payload.ios) {
     return "至少填写一个官网或下载地址";
+  }
+
+  if (payload.reviewStatus === "approved") {
+    if (!payload.valid) {
+      return "审核通过的记录必须标记为可对外展示";
+    }
+    if (!payload.reviewNote) {
+      return "审核通过时必须填写审核备注";
+    }
+    if (!payload.officialSite && !payload.android) {
+      return "审核通过的记录至少需要官网或安卓官方地址之一";
+    }
+  }
+
+  if (payload.reviewStatus === "rejected") {
+    if (payload.valid) {
+      return "已驳回记录不能标记为可对外展示";
+    }
+    if (!payload.reviewNote) {
+      return "驳回记录必须填写驳回原因";
+    }
+  }
+
+  if (payload.reviewStatus === "pending" && payload.valid) {
+    return "待审核记录不能标记为可对外展示";
   }
 
   const duplicate = isDuplicateDraft(payload, ignoreId);
@@ -95,9 +190,28 @@ function resetForm() {
   appForm.reset();
   fields.id.value = "";
   fields.weight.value = "50";
-  fields.valid.checked = true;
+  fields.reviewStatus.value = "pending";
+  syncReviewControls();
   formTitle.textContent = "新增 APP 地址";
   setMessage(formMessage, "");
+}
+
+function syncReviewControls() {
+  const status = fields.reviewStatus.value;
+
+  if (status === "approved") {
+    fields.valid.disabled = false;
+    fields.valid.checked = true;
+    fields.reviewNote.placeholder = "记录核验依据、域名归属、发布时间等审核说明";
+    return;
+  }
+
+  fields.valid.checked = false;
+  fields.valid.disabled = true;
+  fields.reviewNote.placeholder =
+    status === "rejected"
+      ? "请写明驳回原因，例如域名不一致、链接失效、来源不可信"
+      : "可选：记录待补充的信息或人工核验计划";
 }
 
 function bindDraftValidation() {
@@ -117,18 +231,43 @@ async function api(path, options = {}) {
     throw new Error("请通过本地服务打开后台：运行 server.mjs 后访问 http://127.0.0.1:4173/admin.html");
   }
 
+  const method = (options.method || "GET").toUpperCase();
   const response = await fetch(path, {
     headers: {
-      "Content-Type": "application/json",
+      ...(method !== "GET" && method !== "HEAD" ? { "Content-Type": "application/json" } : {}),
+      ...(csrfToken && method !== "GET" && method !== "HEAD" ? { "X-CSRF-Token": csrfToken } : {}),
       ...(options.headers || {}),
     },
+    credentials: "same-origin",
     ...options,
   });
-  const payload = await response.json();
+  const payload = await response.json().catch(() => ({}));
+  if (response.status === 401) {
+    showAuthScreen();
+    throw new Error(payload.error || "登录状态已失效，请重新登录");
+  }
   if (!response.ok) {
     throw new Error(payload.error || "请求失败");
   }
   return payload;
+}
+
+async function ensureSession() {
+  try {
+    const payload = await api("/api/admin/session", {
+      headers: {},
+    });
+    if (!payload.authenticated) {
+      showAuthScreen();
+      return false;
+    }
+    showAdminContent(payload);
+    return true;
+  } catch (error) {
+    showAuthScreen();
+    setMessage(loginMessage, error.message, "error");
+    return false;
+  }
 }
 
 async function loadApps() {
@@ -137,7 +276,9 @@ async function loadApps() {
     apps = payload.apps || [];
     renderList();
   } catch (error) {
-    appList.innerHTML = `<div class="admin-empty">${error.message}</div>`;
+    clearNode(appList);
+    const empty = createElement("div", { className: "admin-empty", text: error.message });
+    appList.appendChild(empty);
     listSummary.textContent = "信息库未连接";
   }
 }
@@ -151,6 +292,8 @@ function renderList() {
       item.officialSite,
       item.android,
       item.ios,
+      item.officialDomain,
+      item.reviewNote,
     ]
       .join(" ")
       .toLowerCase();
@@ -159,33 +302,150 @@ function renderList() {
 
   listSummary.textContent = `共 ${apps.length} 条，当前显示 ${filtered.length} 条`;
 
+  clearNode(appList);
   if (filtered.length === 0) {
-    appList.innerHTML = `<div class="admin-empty">暂无匹配数据</div>`;
+    appList.appendChild(createElement("div", { className: "admin-empty", text: "暂无匹配数据" }));
     return;
   }
 
-  appList.innerHTML = filtered
-    .map(
-      (item) => `
-        <article class="admin-app-row" data-id="${item.id}">
-          <div class="admin-app-icon">${item.icon || item.name.slice(0, 1) || "官"}</div>
-          <div class="admin-app-main">
-            <div class="admin-app-head">
-              <strong>${item.name}</strong>
-              <span class="${item.valid ? "admin-valid" : "admin-invalid"}">${item.valid ? "有效" : "失效"}</span>
-              <span>权重 ${item.weight ?? 50}</span>
-            </div>
-            <p>${aliasesToText(item.aliases) || "暂无别名"}</p>
-            <p>${item.officialSite || "暂无官网"}</p>
-          </div>
-          <div class="row-actions">
-            <button type="button" data-action="edit">编辑</button>
-            <button type="button" data-action="delete">删除</button>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
+  filtered.forEach((item) => {
+    const article = createElement("article", {
+      className: "admin-app-row",
+      dataset: { id: item.id },
+    });
+    article.dataset.id = item.id;
+
+    const icon = createElement("div", {
+      className: "admin-app-icon",
+      text: item.icon || item.name.slice(0, 1) || "官",
+    });
+
+    const main = createElement("div", { className: "admin-app-main" });
+    const head = createElement("div", { className: "admin-app-head" });
+
+    const title = createElement("strong", { text: item.name });
+    const validity = createElement("span", {
+      className: item.valid ? "admin-valid" : "admin-invalid",
+      text: item.valid ? "有效" : "失效",
+    });
+    const review = createElement("span", {
+      className: getReviewClass(item.reviewStatus),
+      text: getReviewLabel(item.reviewStatus),
+    });
+    const weight = createElement("span", { text: `权重 ${item.weight ?? 50}` });
+
+    head.append(title, validity, review, weight);
+
+    const aliasLine = createElement("p", { text: aliasesToText(item.aliases) || "暂无别名" });
+    const domainLine = createElement("p", { text: `官方域名：${item.officialDomain || "未填写"}` });
+    const siteLine = createElement("p", { text: item.officialSite || "暂无官网" });
+    const noteLine = createElement("p", { text: item.reviewNote || "暂无审核备注" });
+
+    main.append(head, aliasLine, domainLine, siteLine, noteLine);
+
+    const actions = createElement("div", { className: "row-actions" });
+    const editButton = createElement("button", {
+      type: "button",
+      text: "编辑",
+      dataset: { action: "edit" },
+    });
+    const deleteButton = createElement("button", {
+      type: "button",
+      text: "删除",
+      dataset: { action: "delete" },
+    });
+    actions.append(editButton, deleteButton);
+
+    article.append(icon, main, actions);
+    appList.appendChild(article);
+  });
+}
+
+function createMetricCard(label, value, helper = "") {
+  const article = createElement("article", { className: "ops-card" });
+  article.append(
+    createElement("span", { className: "ops-card-label", text: label }),
+    createElement("strong", { className: "ops-card-value", text: value }),
+  );
+  if (helper) {
+    article.appendChild(createElement("p", { className: "ops-card-helper", text: helper }));
+  }
+  return article;
+}
+
+function renderAuditLog(records = []) {
+  clearNode(auditLog);
+  if (!records.length) {
+    auditLog.appendChild(createElement("div", { className: "admin-empty", text: "暂无审计记录" }));
+    return;
+  }
+
+  records.forEach((item) => {
+    const row = createElement("article", { className: "audit-item" });
+    const head = createElement("div", { className: "audit-item-head" });
+    head.append(
+      createElement("strong", { text: item.action || "unknown" }),
+      createElement("span", { text: item.createdAt || "" }),
+    );
+
+    const meta = [
+      item.username ? `账号：${item.username}` : "",
+      item.targetId ? `目标：${item.targetId}` : "",
+      item.status ? `状态：${item.status}` : "",
+      item.ip ? `来源：${item.ip}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    row.append(
+      head,
+      createElement("p", { className: "audit-item-meta", text: meta || "无附加信息" }),
+      createElement("p", {
+        className: "audit-item-detail",
+        text:
+          item.detail && Object.keys(item.detail).length
+            ? Object.entries(item.detail)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(" | ")
+            : "无详细字段",
+      }),
+    );
+    auditLog.appendChild(row);
+  });
+}
+
+function renderOpsStatus(payload) {
+  clearNode(opsCards);
+  [
+    createMetricCard("运行环境", payload.environment === "production" ? "生产" : "开发"),
+    createMetricCard("总记录数", String(payload.counts?.total ?? 0)),
+    createMetricCard("已通过", String(payload.counts?.approved ?? 0)),
+    createMetricCard("待审核", String(payload.counts?.pending ?? 0)),
+    createMetricCard("已驳回", String(payload.counts?.rejected ?? 0)),
+    createMetricCard("活跃会话", String(payload.counts?.activeSessions ?? 0)),
+    createMetricCard("审计条数", String(payload.counts?.auditCount ?? 0)),
+    createMetricCard(
+      "最近备份",
+      payload.lastBackupAt || "尚未导出",
+      payload.lastBackupAt ? "建议同步保存到云盘或本地磁盘" : "上线前至少先导出一份",
+    ),
+  ].forEach((card) => opsCards.appendChild(card));
+
+  renderAuditLog(payload.recentAudits || []);
+}
+
+async function loadOpsStatus() {
+  try {
+    const payload = await api("/api/admin/ops/status", {
+      headers: {},
+    });
+    renderOpsStatus(payload);
+    setMessage(opsMessage, "运行状态已刷新");
+  } catch (error) {
+    clearNode(opsCards);
+    opsCards.appendChild(createElement("div", { className: "admin-empty", text: error.message }));
+    setMessage(opsMessage, error.message, "error");
+  }
 }
 
 function editApp(id) {
@@ -198,10 +458,14 @@ function editApp(id) {
   fields.officialSite.value = item.officialSite || "";
   fields.android.value = item.android || "";
   fields.ios.value = item.ios || "";
+  fields.officialDomain.value = item.officialDomain || "";
   fields.valid.checked = Boolean(item.valid);
   fields.weight.value = item.weight ?? 50;
+  fields.reviewStatus.value = item.reviewStatus || "pending";
+  fields.reviewNote.value = item.reviewNote || "";
+  syncReviewControls();
   formTitle.textContent = `编辑：${item.name}`;
-  setMessage(formMessage, "正在编辑现有地址，保存后会覆盖该条记录。", "info");
+  setMessage(formMessage, "正在编辑现有地址，保存后会覆盖并更新审核信息。", "info");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -216,6 +480,7 @@ async function deleteApp(id) {
     setMessage(formMessage, `已删除：${item.name}`);
     if (fields.id.value === id) resetForm();
     await loadApps();
+    await loadOpsStatus();
   } catch (error) {
     setMessage(formMessage, error.message, "error");
   }
@@ -240,6 +505,7 @@ appForm.addEventListener("submit", async (event) => {
     setMessage(formMessage, id ? "已保存修改" : "已添加到信息库");
     resetForm();
     await loadApps();
+    await loadOpsStatus();
   } catch (error) {
     setMessage(formMessage, error.message, "error");
   }
@@ -252,12 +518,23 @@ Object.values(fields).forEach((field) => {
   field.addEventListener("change", bindDraftValidation);
 });
 
+fields.reviewStatus.addEventListener("change", () => {
+  syncReviewControls();
+  bindDraftValidation();
+});
+
 adminSearch.addEventListener("input", renderList);
 
 exportButton.addEventListener("click", async () => {
   try {
-    const response = await fetch("/api/apps/export");
+    const response = await fetch("/api/apps/export", {
+      credentials: "same-origin",
+    });
     const text = await response.text();
+    if (response.status === 401) {
+      showAuthScreen();
+      throw new Error("登录状态已失效，请重新登录");
+    }
     if (!response.ok) {
       throw new Error(text || "导出失败");
     }
@@ -308,9 +585,14 @@ importButton.addEventListener("click", async () => {
     const response = await fetch("/api/apps/import", {
       method: "POST",
       headers: { "Content-Type": "text/csv; charset=utf-8" },
+      credentials: "same-origin",
       body: text,
     });
     const payload = await response.json();
+    if (response.status === 401) {
+      showAuthScreen();
+      throw new Error(payload.error || "登录状态已失效，请重新登录");
+    }
     if (!response.ok) {
       throw new Error(payload.error || "导入失败");
     }
@@ -320,9 +602,103 @@ importButton.addEventListener("click", async () => {
       payload.skipped.length ? "info" : "ok",
     );
     await loadApps();
+    await loadOpsStatus();
   } catch (error) {
     setMessage(importMessage, error.message, "error");
   }
 });
 
-loadApps();
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setMessage(loginMessage, "正在登录...", "info");
+  try {
+    const payload = await api("/api/admin/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username: loginUsername.value.trim(),
+        password: loginPassword.value,
+      }),
+    });
+    loginPassword.value = "";
+    showAdminContent(payload);
+    setMessage(loginMessage, "登录成功");
+    await loadApps();
+    await loadOpsStatus();
+  } catch (error) {
+    setMessage(loginMessage, error.message, "error");
+  }
+});
+
+logoutButton.addEventListener("click", async () => {
+  try {
+    await api("/api/admin/logout", {
+      method: "POST",
+    });
+  } catch {
+    // no-op
+  }
+  showAuthScreen();
+  setMessage(loginMessage, "已退出登录", "info");
+});
+
+refreshOpsButton.addEventListener("click", async () => {
+  setMessage(opsMessage, "正在刷新运行状态...", "info");
+  await loadOpsStatus();
+});
+
+backupButton.addEventListener("click", async () => {
+  try {
+    setMessage(backupMessage, "正在生成备份文件...", "info");
+    const response = await fetch("/api/admin/ops/backup", {
+      method: "POST",
+      headers: {
+        "X-CSRF-Token": csrfToken,
+      },
+      credentials: "same-origin",
+    });
+    const text = await response.text();
+    let payload = {};
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = {};
+    }
+
+    if (response.status === 401) {
+      showAuthScreen();
+      throw new Error(payload.error || "登录状态已失效，请重新登录");
+    }
+    if (!response.ok) {
+      throw new Error(payload.error || "备份导出失败");
+    }
+
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = `sparta-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(href);
+    setMessage(backupMessage, "备份文件已导出");
+    await loadOpsStatus();
+  } catch (error) {
+    setMessage(backupMessage, error.message, "error");
+  }
+});
+
+async function initAdmin() {
+  syncReviewControls();
+  const hasSession = await ensureSession();
+  if (hasSession) {
+    await loadApps();
+    await loadOpsStatus();
+  }
+}
+
+initAdmin().catch((error) => {
+  showAuthScreen();
+  setMessage(loginMessage, error.message || "后台初始化失败", "error");
+  console.error("[admin-init-error]", error);
+});
