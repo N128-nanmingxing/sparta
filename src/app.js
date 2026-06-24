@@ -26,6 +26,7 @@ const hasBackend = location.protocol !== "file:";
 let lastQuery = "";
 let toastTimer = 0;
 let searchTimer = 0;
+let isComposing = false;
 
 function track(eventName, payload = {}) {
   console.info("[prototype-track]", eventName, payload);
@@ -359,16 +360,32 @@ function updateClearButton() {
   elements.clear.classList.toggle("is-visible", elements.input.value.length > 0);
 }
 
+function cleanInputValue() {
+  const cleaned = cleanQuery(elements.input.value);
+  if (elements.input.value !== cleaned) {
+    elements.input.value = cleaned;
+  }
+}
+
 elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
   debouncedSearch();
 });
 
 elements.input.addEventListener("input", () => {
-  const cleaned = cleanQuery(elements.input.value);
-  if (elements.input.value !== cleaned) {
-    elements.input.value = cleaned;
+  if (!isComposing) {
+    cleanInputValue();
   }
+  updateClearButton();
+});
+
+elements.input.addEventListener("compositionstart", () => {
+  isComposing = true;
+});
+
+elements.input.addEventListener("compositionend", () => {
+  isComposing = false;
+  cleanInputValue();
   updateClearButton();
 });
 
