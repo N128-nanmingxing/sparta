@@ -156,56 +156,8 @@ input:focus-visible {
   position: relative;
 }
 
-.status-bar {
-  height: 46px;
-  padding: 14px 24px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  color: #13241f;
-  font-size: 13px;
-  font-weight: 760;
-}
-
-.status-icons {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.battery {
-  width: 25px;
-  height: 12px;
-  border: 1.8px solid currentColor;
-  border-radius: 4px;
-  position: relative;
-  display: inline-block;
-}
-
-.battery::before {
-  content: "";
-  position: absolute;
-  left: 3px;
-  top: 2px;
-  width: 14px;
-  height: 6px;
-  border-radius: 2px;
-  background: currentColor;
-}
-
-.battery::after {
-  content: "";
-  position: absolute;
-  right: -4px;
-  top: 3px;
-  width: 2px;
-  height: 6px;
-  border-radius: 0 2px 2px 0;
-  background: currentColor;
-}
-
 .app-screen {
-  height: calc(100% - 46px);
+  height: 100%;
   padding: 0 22px;
   display: flex;
   flex-direction: column;
@@ -725,10 +677,6 @@ input:focus-visible {
     box-shadow: none;
     background: transparent;
     overflow: visible;
-  }
-
-  .status-bar {
-    display: none;
   }
 
   .app-screen {
