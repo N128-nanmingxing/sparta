@@ -16,7 +16,7 @@ Open:
 Local development defaults:
 
 - admin username: `admin`
-- admin password: `sparta-admin`
+- admin password: `as758521`
 
 These defaults are for local development only. In production, the service expects explicit `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
 
@@ -66,6 +66,22 @@ Before sharing the deployed app publicly, make sure:
 - Render web services must bind to host `0.0.0.0` and use the port from the `PORT` environment variable
 - Only filesystem changes under the disk mount path are persisted across deploys and restarts
 - Render prompts for `sync: false` environment variables only during the initial Blueprint creation flow
+
+## Deploy on Cloudflare Pages
+
+This repo also includes a Cloudflare-compatible path:
+
+1. Create a D1 database named `sparta`
+2. Import `cloudflare/schema.sql`, then `cloudflare/seed.sql`
+3. Create a Pages project from this GitHub repo
+4. Bind the D1 database as `DB`
+5. Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in project variables
+
+Cloudflare routes:
+
+- Frontend: `/`
+- Admin: `/admin`
+- Health check: `/healthz`
 
 ## Data files
 

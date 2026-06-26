@@ -33,8 +33,6 @@ body {
 
 body {
   background:
-    radial-gradient(circle at 16% 0%, rgba(94, 177, 139, 0.18), transparent 28%),
-    radial-gradient(circle at 88% 4%, rgba(239, 192, 93, 0.13), transparent 26%),
     linear-gradient(135deg, #f4f8f5 0%, #eef5f1 100%);
   color: var(--ink);
 }
@@ -46,6 +44,12 @@ input {
 
 button {
   cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(18, 160, 100, 0.42);
+  outline-offset: 2px;
 }
 
 .sr-only {
@@ -148,9 +152,7 @@ button {
   border-radius: 34px;
   border: 1px solid rgba(29, 44, 38, 0.16);
   box-shadow: 0 26px 70px rgba(24, 40, 34, 0.16);
-  background:
-    radial-gradient(circle at 82% 0%, rgba(70, 178, 126, 0.18), transparent 34%),
-    var(--app-bg);
+  background: linear-gradient(180deg, #fbfdfc 0%, #f7fbf8 100%);
   position: relative;
 }
 
@@ -266,9 +268,9 @@ button {
 
 .hero h2 {
   margin: 0;
-  max-width: 300px;
+  max-width: 344px;
   color: #14241f;
-  font-size: 34px;
+  font-size: 32px;
   line-height: 1.15;
   letter-spacing: 0;
   font-weight: 820;
@@ -285,9 +287,9 @@ button {
   margin-top: 28px;
   height: 58px;
   display: grid;
-  grid-template-columns: 1fr 34px 82px;
+  grid-template-columns: minmax(0, 1fr) 34px 76px;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   padding: 0 7px 0 18px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(28, 67, 54, 0.1);
@@ -338,7 +340,7 @@ button {
 }
 
 .search-button {
-  width: 82px;
+  width: 76px;
   height: 44px;
   border: 0;
   border-radius: 14px;
@@ -353,8 +355,13 @@ button {
   transform: translateY(1px) scale(0.99);
 }
 
+.search-button:focus-visible {
+  outline-offset: 3px;
+}
+
 .state-region {
-  min-height: 348px;
+  flex: 1;
+  min-height: 0;
   margin-top: 26px;
 }
 
@@ -446,7 +453,7 @@ button {
 .results {
   display: grid;
   gap: 13px;
-  max-height: 340px;
+  max-height: 352px;
   overflow: auto;
   padding: 2px 2px 8px;
   scrollbar-width: none;
@@ -457,7 +464,7 @@ button {
 }
 
 .result-card {
-  border-radius: var(--radius-lg);
+  border-radius: 20px;
   border: 1px solid rgba(28, 67, 54, 0.08);
   background: #ffffff;
   box-shadow: 0 18px 42px rgba(20, 44, 36, 0.09);
@@ -571,6 +578,14 @@ button {
   font-weight: 780;
 }
 
+.compliance-note {
+  margin: 8px 0 17px;
+  color: rgba(34, 53, 47, 0.52);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .link-action[disabled] {
   cursor: not-allowed;
   color: #8b9691;
@@ -682,6 +697,185 @@ button {
 
 .legal-document p + p {
   margin-top: 16px;
+}
+
+@media (min-width: 861px) {
+  body {
+    background: #f7faf8;
+  }
+
+  .prototype-shell {
+    width: min(980px, 100%);
+    min-height: 100vh;
+    display: block;
+    margin: 0 auto;
+    padding: 46px clamp(22px, 4vw, 40px) 34px;
+  }
+
+  .desktop-brief {
+    display: none;
+  }
+
+  .phone {
+    width: 100%;
+    height: auto;
+    min-height: calc(100vh - 80px);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .status-bar {
+    display: none;
+  }
+
+  .app-screen {
+    min-height: calc(100vh - 80px);
+    height: auto;
+    padding: 0;
+  }
+
+  .app-header {
+    margin-top: 0;
+  }
+
+  .brand-mark {
+    box-shadow: none;
+  }
+
+  .trust-pill {
+    min-height: 34px;
+    background: #ffffff;
+    border: 1px solid #e7efeb;
+    color: #118653;
+  }
+
+  .hero {
+    max-width: 760px;
+    margin: 104px auto 0;
+    text-align: center;
+  }
+
+  .hero h2 {
+    max-width: none;
+    font-size: 48px;
+    line-height: 1.08;
+  }
+
+  .hero p {
+    max-width: 620px;
+    margin-right: auto;
+    margin-left: auto;
+    font-size: 16px;
+  }
+
+  .search-card {
+    width: min(760px, 100%);
+    height: 66px;
+    grid-template-columns: 1fr 36px 112px;
+    margin: 34px auto 0;
+    padding: 0 8px 0 22px;
+    border-radius: 20px;
+    border-color: #e4ece8;
+    box-shadow: 0 16px 38px rgba(19, 42, 34, 0.08);
+  }
+
+  #searchInput {
+    height: 48px;
+    font-size: 17px;
+  }
+
+  .search-button {
+    width: 112px;
+    height: 50px;
+    border-radius: 16px;
+  }
+
+  .state-region {
+    width: min(860px, 100%);
+    min-height: 300px;
+    flex: initial;
+    margin: 42px auto 0;
+  }
+
+  .empty-state,
+  .notice-state {
+    min-height: 250px;
+  }
+
+  .empty-mark,
+  .notice-mark {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    font-size: 25px;
+  }
+
+  .empty-state h3,
+  .notice-state h3 {
+    font-size: 18px;
+  }
+
+  .empty-state p,
+  .notice-state p {
+    max-width: 420px;
+  }
+
+  .summary-row {
+    font-size: 13px;
+  }
+
+  .results {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    align-items: start;
+    max-height: none;
+    overflow: visible;
+    gap: 16px;
+    padding: 2px 2px 10px;
+  }
+
+  .result-card {
+    min-height: 100%;
+    border-color: #e7efeb;
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(20, 44, 36, 0.06);
+  }
+
+  .meta-line {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .toast {
+    top: 110px;
+  }
+
+  .legal-links {
+    padding: 26px 0 0;
+  }
+
+  .compliance-note {
+    margin-bottom: 0;
+  }
+
+  .legal-screen {
+    width: min(820px, 100%);
+    min-height: calc(100vh - 80px);
+    margin: 0 auto;
+    padding: 0 0 34px;
+  }
+
+  .legal-topbar {
+    margin-top: 0;
+  }
+
+  .legal-document {
+    border-color: #e7efeb;
+    padding: 30px;
+    box-shadow: none;
+  }
 }
 
 .admin-page {
@@ -1167,6 +1361,174 @@ button {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.55);
   font-size: 14px;
+}
+
+@media (min-width: 861px) {
+  .admin-page {
+    background: #f7faf8;
+  }
+
+  .admin-shell {
+    width: min(1280px, 100%);
+    padding: 30px clamp(24px, 3vw, 40px) 44px;
+  }
+
+  .admin-header {
+    align-items: center;
+    margin-bottom: 22px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e4ece8;
+  }
+
+  .admin-kicker {
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .admin-header h1 {
+    margin-top: 8px;
+    font-size: 32px;
+  }
+
+  .admin-header p {
+    margin-top: 8px;
+  }
+
+  .admin-header a,
+  .secondary-admin-button,
+  .panel-title button,
+  .row-actions button,
+  .import-actions button,
+  .file-button {
+    border-radius: 8px;
+    box-shadow: none;
+  }
+
+  .admin-header a {
+    background: #159a62;
+  }
+
+  .secondary-admin-button,
+  .panel-title button,
+  .row-actions button,
+  .import-actions button,
+  .file-button {
+    background: #eef6f2;
+  }
+
+  .admin-grid {
+    grid-template-columns: minmax(430px, 1fr) minmax(360px, 0.86fr);
+    gap: 16px;
+  }
+
+  .admin-panel {
+    border-color: #e4ece8;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: none;
+    padding: 18px;
+  }
+
+  .panel-title {
+    margin-bottom: 16px;
+  }
+
+  .panel-title h2 {
+    font-size: 18px;
+  }
+
+  .app-form {
+    gap: 12px;
+  }
+
+  .app-form input,
+  .list-search input,
+  .import-panel textarea,
+  .app-form textarea,
+  .app-form select {
+    border-radius: 8px;
+    border-color: #dce7e2;
+  }
+
+  .primary-admin-button {
+    border-radius: 8px;
+  }
+
+  .import-panel textarea {
+    min-height: 164px;
+  }
+
+  .admin-ops-grid {
+    grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
+    margin-top: 16px;
+  }
+
+  .ops-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .ops-card,
+  .audit-item,
+  .admin-app-row,
+  .admin-empty {
+    border-color: #e4ece8;
+    border-radius: 8px;
+  }
+
+  .ops-card {
+    padding: 12px;
+  }
+
+  .ops-card-value {
+    font-size: 22px;
+  }
+
+  .audit-log {
+    max-height: 282px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+
+  .list-panel {
+    margin-top: 16px;
+  }
+
+  .list-toolbar {
+    align-items: center;
+  }
+
+  .list-search {
+    width: min(420px, 42vw);
+  }
+
+  .app-table {
+    gap: 8px;
+  }
+
+  .admin-app-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+
+  .admin-app-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 20px;
+  }
+
+  .admin-app-head strong {
+    font-size: 16px;
+  }
+
+  .admin-app-head span {
+    border-radius: 6px;
+  }
 }
 
 @media (max-width: 860px) {

@@ -77,7 +77,7 @@
 
             <label>
               <span>官方主域名</span>
-              <input id="officialDomain" placeholder="例如：weixin.qq.com" />
+              <input id="officialDomain" placeholder="例如：pinduoduo.com;yangkeduo.com" />
             </label>
 
             <label>
@@ -124,17 +124,19 @@
 
           <section class="admin-panel import-panel">
             <div class="panel-title">
-              <h2>CSV 批量导入</h2>
+              <h2>批量导入</h2>
             </div>
-            <p class="csv-help">表头固定：name,aliases,icon,officialSite,android,ios,officialDomain,valid,weight,reviewStatus,reviewNote</p>
-            <textarea id="csvText" rows="8" spellcheck="false">name,aliases,icon,officialSite,android,ios,officialDomain,valid,weight,reviewStatus,reviewNote
-示例APP,示例;demo,示,https://example.com,https://example.com/android,https://apps.apple.com/app/demo,example.com,true,70,pending,待人工核验</textarea>
+            <p class="csv-help">每条 APP 分行填写：第一行名称，后面写官方域名、官网或下载地址；多条 APP 之间空一行。也可以继续选择 CSV 文件导入。</p>
+            <textarea id="csvText" rows="8" spellcheck="false" placeholder="美团
+meituan.com
+https://www.meituan.com
+https://www.meituan.com/mobile"></textarea>
             <div class="import-actions">
               <label class="file-button">
                 选择CSV文件
                 <input id="csvFile" type="file" accept=".csv,text/csv" />
               </label>
-              <button id="importButton" type="button">导入CSV</button>
+              <button id="importButton" type="button">批量导入</button>
             </div>
             <p class="admin-message" id="importMessage" role="status"></p>
           </section>

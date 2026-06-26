@@ -41,6 +41,44 @@ const backupMessage = document.querySelector("#backupMessage");
 const auditLog = document.querySelector("#auditLog");
 
 const hasBackend = location.protocol !== "file:";
+const pipeImportFields = [
+  "name",
+  "aliases",
+  "icon",
+  "weight",
+  "officialDomain",
+  "officialSite",
+  "android",
+  "ios",
+  "reviewStatus",
+  "valid",
+  "reviewNote",
+];
+const blockImportLabels = new Map([
+  ["名称", "name"],
+  ["app", "name"],
+  ["APP", "name"],
+  ["别名", "aliases"],
+  ["图标", "icon"],
+  ["权重", "weight"],
+  ["官方主域名", "officialDomain"],
+  ["主域名", "officialDomain"],
+  ["域名", "officialDomain"],
+  ["官网", "officialSite"],
+  ["官方网站", "officialSite"],
+  ["安卓下载", "android"],
+  ["安卓", "android"],
+  ["android", "android"],
+  ["Android", "android"],
+  ["iOS下载", "ios"],
+  ["ios下载", "ios"],
+  ["iOS", "ios"],
+  ["ios", "ios"],
+  ["审核状态", "reviewStatus"],
+  ["有效", "valid"],
+  ["审核备注", "reviewNote"],
+  ["备注", "reviewNote"],
+]);
 let apps = [];
 let currentSession = null;
 let csrfToken = "";
@@ -85,6 +123,155 @@ function createElement(tagName, options = {}) {
     });
   }
   return node;
+}
+
+function withImportDefaults(row) {
+  return {
+    ...row,
+    valid: row.valid || "true",
+    reviewStatus: row.reviewStatus || "approved",
+    reviewNote: row.reviewNote || "批量导入，已按官方域名核验",
+  };
+}
+
+function parsePipeImport(text) {
+  return text
+    .split(/\r?\n/g)
+    .map((line, index) => ({ line: line.trim(), rowNumber: index + 1 }))
+    .filter(({ line }) => line && !line.startsWith("#"))
+    .map(({ line, rowNumber }) => {
+      const values = line.split("|").map((value) => value.trim());
+      const row = Object.fromEntries(pipeImportFields.map((field, index) => [field, values[index] || ""]));
+      return withImportDefaults({ ...row, importRowNumber: rowNumber });
+    });
+}
+
+function splitImportBlocks(text) {
+  const blocks = [];
+  let current = [];
+  let startLine = 1;
+
+  text.split(/\r?\n/g).forEach((rawLine, index) => {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      if (current.length) {
+        blocks.push({ lines: current, startLine });
+        current = [];
+      }
+      startLine = index + 2;
+      return;
+    }
+    if (!current.length) startLine = index + 1;
+    current.push(line);
+  });
+
+  if (current.length) {
+    blocks.push({ lines: current, startLine });
+  }
+  return blocks;
+}
+
+function parseBlockLine(line) {
+  const match = line.match(/^([^:：]+)[:：]\s*(.*)$/);
+  if (!match) return null;
+  const field = blockImportLabels.get(match[1].trim());
+  if (!field) return null;
+  return { field, value: match[2].trim() };
+}
+
+function isUrlLike(value) {
+  return /^https?:\/\//i.test(value);
+}
+
+function isDomainLike(value) {
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(value);
+}
+
+function assignImportValue(row, value, lineIndex) {
+  if (!value) return;
+
+  if (isUrlLike(value)) {
+    const host = new URL(value).hostname.toLowerCase();
+    if (host === "apps.apple.com") {
+      row.ios ||= value;
+      return;
+    }
+    if (/android|apk|download|mobile/i.test(value)) {
+      row.android ||= value;
+      return;
+    }
+    row.officialSite ||= value;
+    return;
+  }
+
+  if (isDomainLike(value)) {
+    row.officialDomain ||= value;
+    return;
+  }
+
+  if (!row.name) {
+    row.name = value;
+    return;
+  }
+
+  if (lineIndex === 1 && value.length <= 2 && !row.icon) {
+    row.icon = value;
+    return;
+  }
+
+  row.aliases = row.aliases ? `${row.aliases};${value}` : value;
+}
+
+function parseBlockImport(text) {
+  return splitImportBlocks(text).map((block, index) => {
+    const row = {};
+    block.lines.forEach((line, lineIndex) => {
+      const parsed = parseBlockLine(line);
+      if (parsed) {
+        row[parsed.field] = parsed.value;
+        return;
+      }
+
+      assignImportValue(row, line, lineIndex);
+    });
+    return withImportDefaults({
+      ...row,
+      importRowNumber: block.startLine,
+      importGroupNumber: index + 1,
+    });
+  });
+}
+
+function parseTextImport(text) {
+  return text.includes("|") ? parsePipeImport(text) : parseBlockImport(text);
+}
+
+function getPipeImportHint(row) {
+  const missing = [];
+  if (!row.name) missing.push("名称");
+  if (!row.officialSite && !row.android) missing.push("官网/安卓地址至少一个");
+
+  if (!missing.length) return "";
+  const target = row.importGroupNumber ? `第 ${row.importGroupNumber} 组` : `第 ${row.importRowNumber} 行`;
+  return `${target}缺少：${missing.join("、")}。最少这样写两行：APP名称、官网或安卓下载地址。`;
+}
+
+function getSkippedImportSummary(skipped) {
+  if (!Array.isArray(skipped) || skipped.length === 0) return "";
+  const details = skipped
+    .slice(0, 3)
+    .map((item) => `第 ${item.row} 行：${item.error || "数据无效"}`)
+    .join("；");
+  const suffix = skipped.length > 3 ? `；另有 ${skipped.length - 3} 条未显示` : "";
+  return `。${details}${suffix}`;
+}
+
+function looksLikeCsv(text) {
+  const firstLine = text
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .find(Boolean);
+  return Boolean(firstLine && firstLine.toLowerCase().startsWith("name,"));
 }
 
 function getReviewLabel(status) {
@@ -578,15 +765,27 @@ importButton.addEventListener("click", async () => {
   try {
     const text = csvText.value.trim();
     if (!text) {
-      setMessage(importMessage, "请先粘贴CSV内容或选择CSV文件", "error");
+      setMessage(importMessage, "请先粘贴批量内容或选择CSV文件", "error");
       return;
     }
 
+    const isCsv = looksLikeCsv(text);
+    const pipeRows = isCsv ? [] : parseTextImport(text);
+    const pipeHint = pipeRows.map(getPipeImportHint).find(Boolean);
+    if (pipeHint) {
+      setMessage(importMessage, pipeHint, "error");
+      return;
+    }
+
+    const body = isCsv ? text : JSON.stringify({ apps: pipeRows });
     const response = await fetch("/api/apps/import", {
       method: "POST",
-      headers: { "Content-Type": "text/csv; charset=utf-8" },
+      headers: {
+        "Content-Type": isCsv ? "text/csv; charset=utf-8" : "application/json; charset=utf-8",
+        ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+      },
       credentials: "same-origin",
-      body: text,
+      body,
     });
     const payload = await response.json();
     if (response.status === 401) {
@@ -598,8 +797,8 @@ importButton.addEventListener("click", async () => {
     }
     setMessage(
       importMessage,
-      `导入成功 ${payload.imported.length} 条，跳过 ${payload.skipped.length} 条`,
-      payload.skipped.length ? "info" : "ok",
+      `导入成功 ${payload.imported.length} 条，跳过 ${payload.skipped.length} 条${getSkippedImportSummary(payload.skipped)}`,
+      payload.skipped.length ? "error" : "ok",
     );
     await loadApps();
     await loadOpsStatus();
@@ -616,7 +815,7 @@ loginForm.addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify({
         username: loginUsername.value.trim(),
-        password: loginPassword.value,
+        password: loginPassword.value.trim(),
       }),
     });
     loginPassword.value = "";

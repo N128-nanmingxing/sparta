@@ -13,7 +13,7 @@ const preferredPort = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 const isProduction = process.env.NODE_ENV === "production";
 const adminUsername = process.env.ADMIN_USERNAME || (isProduction ? "" : "admin");
-const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? "" : "sparta-admin");
+const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? "" : "as758521");
 const sessionCookieName = "sparta_admin_session";
 const sessionTtlMs = 1000 * 60 * 60 * 12;
 const loginAttemptWindowMs = 1000 * 60 * 10;
@@ -372,19 +372,26 @@ function normalizeDomain(value) {
   const text = sanitizeText(value, 200);
   if (!text) return "";
 
-  const source = text.includes("://") ? text : `https://${text}`;
-  let url;
-  try {
-    url = new URL(source);
-  } catch {
-    throw new Error("官方主域名格式不正确");
-  }
+  return text
+    .split(/[;,；，\s]+/g)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => {
+      const source = item.includes("://") ? item : `https://${item}`;
+      let url;
+      try {
+        url = new URL(source);
+      } catch {
+        throw new Error("官方主域名格式不正确");
+      }
 
-  const hostName = url.hostname.toLowerCase().replace(/\.$/, "").replace(/^www\./, "");
-  if (!/^[a-z0-9.-]+$/.test(hostName)) {
-    throw new Error("官方主域名格式不正确");
-  }
-  return hostName;
+      const hostName = url.hostname.toLowerCase().replace(/\.$/, "").replace(/^www\./, "");
+      if (!/^[a-z0-9.-]+$/.test(hostName)) {
+        throw new Error("官方主域名格式不正确");
+      }
+      return hostName;
+    })
+    .join(";");
 }
 
 function deriveOfficialDomain(value) {
@@ -395,8 +402,11 @@ function deriveOfficialDomain(value) {
 
 function hostMatchesDomain(hostName, officialDomain) {
   const host = hostName.toLowerCase();
-  const domain = officialDomain.toLowerCase();
-  return host === domain || host.endsWith(`.${domain}`);
+  return String(officialDomain || "")
+    .split(";")
+    .map((domain) => domain.trim().toLowerCase())
+    .filter(Boolean)
+    .some((domain) => host === domain || host.endsWith(`.${domain}`));
 }
 
 function validateOfficialUrl(urlValue, officialDomain, label) {
@@ -642,9 +652,22 @@ function findResults(query) {
     .all()
     .map(rowToApp);
 
+  if (lower === "app" || normalized === "软件") {
+    return apps.filter((item) => item.valid).slice(0, 5);
+  }
+
+  const exactMatches = apps.filter((item) => {
+    const itemName = normalizeCompare(item.name);
+    const aliases = normalizeAliases(item.aliases).map(normalizeCompare);
+    return itemName === lower || aliases.includes(lower);
+  });
+
+  if (exactMatches.length > 0) {
+    return exactMatches.slice(0, 5);
+  }
+
   return apps
     .filter((item) => {
-      if (lower === "app" || normalized === "软件") return item.valid;
       if (item.name.includes(normalized)) return true;
       return item.aliases.some((alias) => {
         const normalizedAlias = String(alias).toLowerCase();
@@ -716,6 +739,18 @@ function parseCsv(text) {
   return nonEmptyRows.slice(1).map((values) =>
     Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""])),
   );
+}
+
+function parseImportRows(raw, contentType) {
+  if (!contentType.includes("application/json")) {
+    return { rows: parseCsv(raw), rowOffset: 2 };
+  }
+
+  const payload = JSON.parse(raw || "{}");
+  if (!Array.isArray(payload.apps)) {
+    throw new Error("JSON导入内容必须包含 apps 数组");
+  }
+  return { rows: payload.apps, rowOffset: 1 };
 }
 
 function escapeCsvCell(value) {
@@ -1014,11 +1049,11 @@ async function handleApi(request, response, url) {
     try {
       const body = JSON.parse(await readBody(request));
       const username = sanitizeText(body.username, 60);
-      const password = String(body.password || "");
+      const password = String(body.password || "").trim();
       const ip = getRequestIp(request);
       const limitState = getLoginLimitState(ip);
 
-      if (limitState.blocked) {
+      if (isProduction && limitState.blocked) {
         sendJson(response, 429, {
           error: `登录失败次数过多，请在 ${limitState.retryAfterSeconds} 秒后重试`,
           code: "LOGIN_RATE_LIMITED",
@@ -1034,7 +1069,7 @@ async function handleApi(request, response, url) {
       }
 
       if (!safeEquals(username, adminUsername) || !safeEquals(password, adminPassword)) {
-        const nextLimit = registerLoginFailure(ip);
+        const nextLimit = isProduction ? registerLoginFailure(ip) : { failures: 1, blockedUntil: 0 };
         recordAudit("login_failure", {
           request,
           username,
@@ -1253,9 +1288,7 @@ async function handleApi(request, response, url) {
     try {
       const raw = await readBody(request);
       const contentType = request.headers["content-type"] || "";
-      const rows = contentType.includes("application/json")
-        ? JSON.parse(raw).apps || []
-        : parseCsv(raw);
+      const { rows, rowOffset } = parseImportRows(raw, contentType);
 
       const skipped = [];
       const imported = [];
@@ -1270,7 +1303,7 @@ async function handleApi(request, response, url) {
           imported.push(app);
           pendingInsertions.push(app);
         } catch (error) {
-          skipped.push({ row: index + 2, error: error.message || "数据无效" });
+          skipped.push({ row: Number(row.importRowNumber || index + rowOffset), error: error.message || "数据无效" });
         }
       });
       db.exec("BEGIN");
