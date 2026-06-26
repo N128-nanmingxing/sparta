@@ -5,8 +5,4 @@ pages_build_output_dir = "."
 [[d1_databases]]
 binding = "DB"
 database_name = "sparta"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
-
-[vars]
-ADMIN_USERNAME = "REPLACE_ME"
-ADMIN_PASSWORD = "REPLACE_ME"
+database_id = "5ce3a945-f97c-4f22-9d53-aa5b5d2d64ae"

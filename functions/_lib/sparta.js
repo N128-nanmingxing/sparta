@@ -12,6 +12,7 @@ const correctionMap = new Map([
   ["企微", "企业微信"],
 ]);
 const reviewStatuses = new Set(["pending", "approved", "rejected"]);
+let schemaReadyPromise = null;
 const securityHeaders = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
@@ -260,10 +261,10 @@ function safeEquals(left, right) {
 }
 
 async function ensureSchema(env) {
-  if (env.__spartaSchemaReady) return;
-  env.__spartaSchemaReady = (async () => {
-    await env.DB.exec(`
-      CREATE TABLE IF NOT EXISTS apps (
+  if (schemaReadyPromise) return schemaReadyPromise;
+  schemaReadyPromise = (async () => {
+    const schemaStatements = [
+      `CREATE TABLE IF NOT EXISTS apps (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         aliases_json TEXT NOT NULL DEFAULT '[]',
@@ -279,16 +280,16 @@ async function ensureSchema(env) {
         reviewed_at TEXT NOT NULL DEFAULT '',
         reviewed_by TEXT NOT NULL DEFAULT '',
         updated_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS sessions (
+      )`,
+      `CREATE TABLE IF NOT EXISTS sessions (
         token TEXT PRIMARY KEY,
         username TEXT NOT NULL,
         csrf_token TEXT NOT NULL,
         created_at TEXT NOT NULL,
         last_seen_at TEXT NOT NULL,
         expires_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      )`,
+      `CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         action TEXT NOT NULL,
         username TEXT NOT NULL DEFAULT '',
@@ -297,19 +298,23 @@ async function ensureSchema(env) {
         ip TEXT NOT NULL DEFAULT '',
         detail_json TEXT NOT NULL DEFAULT '{}',
         created_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS login_attempts (
+      )`,
+      `CREATE TABLE IF NOT EXISTS login_attempts (
         ip TEXT PRIMARY KEY,
         failures INTEGER NOT NULL DEFAULT 0,
         last_failure_at INTEGER NOT NULL DEFAULT 0,
         blocked_until INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE INDEX IF NOT EXISTS idx_apps_name ON apps(name);
-      CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC);
-      CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status);
-      CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
-      CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
-    `);
+      )`,
+      "CREATE INDEX IF NOT EXISTS idx_apps_name ON apps(name)",
+      "CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status)",
+      "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
+      "CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)",
+    ];
+
+    for (const statement of schemaStatements) {
+      await env.DB.prepare(statement).run();
+    }
 
     const { results } = await env.DB.prepare("SELECT COUNT(*) AS total FROM apps").all();
     const total = Number(results?.[0]?.total || 0);
@@ -319,7 +324,7 @@ async function ensureSchema(env) {
 
     await env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(Date.now()).run();
   })();
-  return env.__spartaSchemaReady;
+  return schemaReadyPromise;
 }
 
 async function seedDatabase(env) {

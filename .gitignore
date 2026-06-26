@@ -1,5 +1,6 @@
 .DS_Store
 .vscode/
+.wrangler/
 .npm-cache/
 data/*.sqlite
 data/*.sqlite-shm
