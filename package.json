@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
-    "build": "node --check server.mjs && node --check src/app.js && node --check src/admin.js"
+    "build": "node --check server.mjs && node --check src/app.js && node --check src/admin.js && node --check functions/_lib/sparta.js && node scripts/build-pages.mjs",
+    "pages:build": "node scripts/build-pages.mjs"
   },
   "dependencies": {},
   "devDependencies": {}

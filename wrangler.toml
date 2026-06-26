@@ -1,8 +1,8 @@
-name = "sparta"
+name = "sparta-app"
 compatibility_date = "2026-06-24"
-pages_build_output_dir = "."
+pages_build_output_dir = "dist"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "sparta"
-database_id = "5ce3a945-f97c-4f22-9d53-aa5b5d2d64ae"
+database_id = "5b9146de-2802-437b-b0f8-66282476596e"
