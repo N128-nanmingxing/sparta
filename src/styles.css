@@ -1691,7 +1691,7 @@ input:focus-visible {
 
   .request-fab {
     right: 14px;
-    bottom: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px) + 72px);
   }
 
   .ops-cards {
@@ -1747,5 +1747,11 @@ input:focus-visible {
   .request-fab-panel {
     width: min(300px, calc(100vw - 20px));
     padding: 14px;
+  }
+
+  .request-fab-toggle {
+    min-width: 116px;
+    height: 46px;
+    font-size: 15px;
   }
 }
