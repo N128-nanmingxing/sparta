@@ -305,11 +305,22 @@ async function ensureSchema(env) {
         last_failure_at INTEGER NOT NULL DEFAULT 0,
         blocked_until INTEGER NOT NULL DEFAULT 0
       )`,
+      `CREATE TABLE IF NOT EXISTS site_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        website TEXT NOT NULL DEFAULT '',
+        note TEXT NOT NULL DEFAULT '',
+        contact TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'new',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
       "CREATE INDEX IF NOT EXISTS idx_apps_name ON apps(name)",
       "CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC)",
       "CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status)",
       "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
       "CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC)",
     ];
 
     for (const statement of schemaStatements) {
@@ -612,6 +623,74 @@ async function getOpsStatus(env) {
   };
 }
 
+function rowToSiteRequest(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    website: row.website,
+    note: row.note,
+    contact: row.contact,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function createSiteRequest(env, input) {
+  const name = sanitizeText(input.name, 60);
+  const website = sanitizeText(input.website, 200);
+  const note = sanitizeText(input.note, 500);
+  const contact = sanitizeText(input.contact, 120);
+
+  if (!name) {
+    throw new Error("请填写想添加的网站名称");
+  }
+  if (!note && !website) {
+    throw new Error("请至少填写网站地址或需求说明");
+  }
+
+  const now = nowIso();
+  const result = await env.DB.prepare(`
+    INSERT INTO site_requests (name, website, note, contact, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, 'new', ?, ?)
+  `)
+    .bind(name, website, note, contact, now, now)
+    .run();
+
+  const id = result.meta?.last_row_id || result.meta?.lastRowId;
+  const row = await env.DB.prepare("SELECT * FROM site_requests WHERE id = ?").bind(id).first();
+  return rowToSiteRequest(row);
+}
+
+async function getSiteRequests(env, limit = 80) {
+  const { results } = await env.DB.prepare(`
+    SELECT * FROM site_requests
+    ORDER BY id DESC
+    LIMIT ?
+  `)
+    .bind(limit)
+    .all();
+  return results.map(rowToSiteRequest);
+}
+
+async function updateSiteRequestStatus(env, id, status) {
+  const nextStatus = ["new", "reviewed", "archived"].includes(status) ? status : "new";
+  const existing = await env.DB.prepare("SELECT * FROM site_requests WHERE id = ?").bind(id).first();
+  if (!existing) return null;
+  await env.DB.prepare("UPDATE site_requests SET status = ?, updated_at = ? WHERE id = ?")
+    .bind(nextStatus, nowIso(), id)
+    .run();
+  const row = await env.DB.prepare("SELECT * FROM site_requests WHERE id = ?").bind(id).first();
+  return rowToSiteRequest(row);
+}
+
+async function deleteSiteRequest(env, id) {
+  const existing = await env.DB.prepare("SELECT * FROM site_requests WHERE id = ?").bind(id).first();
+  if (!existing) return null;
+  await env.DB.prepare("DELETE FROM site_requests WHERE id = ?").bind(id).run();
+  return rowToSiteRequest(existing);
+}
+
 async function exportBackup(env, username) {
   const apps = await getAllApps(env);
   const audits = await env.DB.prepare("SELECT * FROM audit_logs ORDER BY id DESC").all();
@@ -827,6 +906,22 @@ async function handleApiRequest(context) {
     return makeJson({ results: await searchApps(env, query) });
   }
 
+  if (method === "POST" && pathname === "/api/site-requests") {
+    try {
+      const body = await request.json().catch(() => ({}));
+      const created = await createSiteRequest(env, body);
+      await recordAudit(env, {
+        request,
+        action: "site_request_create",
+        status: "ok",
+        detail: { name: created.name, website: created.website },
+      });
+      return makeJson({ ok: true, request: created });
+    } catch (error) {
+      return makeJson({ error: error.message || "提交失败" }, 400);
+    }
+  }
+
   if (pathname === "/api/admin/ops/status" && method === "GET") {
     const session = await getSession(env, request);
     if (!session) return makeJson({ error: "请先登录后台账号", code: "AUTH_REQUIRED" }, 401);
@@ -862,6 +957,39 @@ async function handleApiRequest(context) {
 
   if (pathname === "/api/apps" && method === "GET") {
     return makeJson({ apps: await getAllApps(env) });
+  }
+
+  if (pathname === "/api/site-requests" && method === "GET") {
+    return makeJson({ requests: await getSiteRequests(env) });
+  }
+
+  if (/^\/api\/site-requests\/\d+$/.test(pathname)) {
+    const id = Number(pathname.split("/").pop());
+    if (method === "PATCH") {
+      const body = await request.json().catch(() => ({}));
+      const updated = await updateSiteRequestStatus(env, id, body.status);
+      if (!updated) return makeJson({ error: "留言不存在" }, 404);
+      await recordAudit(env, {
+        request,
+        action: "site_request_update",
+        username: session.username,
+        targetId: String(id),
+        detail: { status: updated.status, name: updated.name },
+      });
+      return makeJson({ ok: true, request: updated });
+    }
+    if (method === "DELETE") {
+      const deleted = await deleteSiteRequest(env, id);
+      if (!deleted) return makeJson({ error: "留言不存在" }, 404);
+      await recordAudit(env, {
+        request,
+        action: "site_request_delete",
+        username: session.username,
+        targetId: String(id),
+        detail: { name: deleted.name },
+      });
+      return makeJson({ ok: true });
+    }
   }
 
   if (pathname === "/api/apps/export" && method === "GET") {
