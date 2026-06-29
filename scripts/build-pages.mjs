@@ -6,6 +6,8 @@ const root = new URL("../", import.meta.url);
 const entries = [
   "index.html",
   "admin.html",
+  "stats.html",
+  "platform.html",
   "admin",
   "_routes.json",
   "_redirects",

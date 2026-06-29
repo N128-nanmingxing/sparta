@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7faf8" />
+    <title>Sparta 商业介绍页</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+        --ink: #13241f;
+        --muted: #60726b;
+        --line: #e3ece7;
+        --green: #12a064;
+        --green-dark: #0b7648;
+        --bg: #f7faf8;
+        --surface: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        background: radial-gradient(circle at top left, #eff8f2 0%, #f7faf8 44%, #eef4f1 100%);
+        color: var(--ink);
+      }
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 20px 56px;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 26px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 800;
+      }
+      .mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        background: linear-gradient(145deg, #16a46a, #47c892);
+        font-size: 22px;
+      }
+      .actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 760;
+      }
+      .primary {
+        color: #fff;
+        background: var(--green);
+      }
+      .secondary {
+        color: var(--green-dark);
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 24px;
+        align-items: stretch;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 16px 38px rgba(20, 44, 36, 0.08);
+      }
+      .hero-copy {
+        padding: 30px;
+      }
+      .kicker {
+        color: var(--green-dark);
+        font-size: 13px;
+        font-weight: 780;
+      }
+      h1 {
+        margin: 12px 0 0;
+        font-size: 46px;
+        line-height: 1.08;
+      }
+      .lead {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.7;
+        max-width: 560px;
+      }
+      .tags {
+        margin-top: 22px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .tags span {
+        padding: 8px 11px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-size: 13px;
+        font-weight: 680;
+      }
+      .hero-shot {
+        padding: 18px;
+        display: grid;
+        gap: 14px;
+      }
+      .card {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: #fff;
+      }
+      .card strong {
+        display: block;
+        font-size: 16px;
+      }
+      .card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .grid {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .grid .card {
+        min-height: 128px;
+      }
+      .footer-note {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      @media (max-width: 860px) {
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        h1 {
+          font-size: 34px;
+        }
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div class="brand">
+          <div class="mark">官</div>
+          <div>
+            <div>Sparta</div>
+            <div style="color:#60726b;font-size:13px;font-weight:650;">品牌官方入口管理平台</div>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="secondary" href="/">查看演示</a>
+          <a class="primary" href="/admin">进入后台</a>
+        </div>
+      </header>
+
+      <section class="hero">
+        <article class="panel hero-copy">
+          <div class="kicker">可交付 · 可白标 · 可并入</div>
+          <h1>把官方地址、下载入口和审核后台统一起来</h1>
+          <p class="lead">
+            适合 App 团队、品牌方、建站公司和私域运营团队。支持官方链接聚合、后台审核、导入导出、备份审计，能直接拿去演示、交付或并入现有产品。
+          </p>
+          <div class="tags">
+            <span>官方链接聚合</span>
+            <span>人工审核</span>
+            <span>导入导出</span>
+            <span>备份审计</span>
+            <span>可接入域名</span>
+          </div>
+        </article>
+
+        <aside class="panel hero-shot">
+          <div class="card">
+            <strong>你现在能卖的不是搜索框</strong>
+            <p>而是一个能马上上线的“官方入口管理资产包”。</p>
+          </div>
+          <div class="card">
+            <strong>买家最在意的四件事</strong>
+            <p>能不能接手、能不能白标、能不能快速上线、能不能持续维护。</p>
+          </div>
+          <div class="card">
+            <strong>下一步</strong>
+            <p>补统计页、补报价页、补交付文档，然后开始找第一批试用客户。</p>
+          </div>
+        </aside>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <strong>为什么会有人买</strong>
+          <p>比从零开发更快，比单纯页面更完整，比只卖源码更像产品。</p>
+        </article>
+        <article class="card">
+          <strong>适合卖给谁</strong>
+          <p>品牌方、App 团队、建站公司、代运营、私域团队、SaaS 厂商。</p>
+        </article>
+        <article class="card">
+          <strong>怎么卖</strong>
+          <p>源码交付、白标授权、整站交付、模块并入、定制二开。</p>
+        </article>
+      </section>
+
+      <p class="footer-note">这是一页对外讲商业价值的参考页，不影响现有主站和后台。</p>
+    </main>
+  </body>
+</html>

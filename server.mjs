@@ -977,7 +977,20 @@ function requireTrustedOrigin(request, response) {
     .split(",")[0]
     .trim();
 
-  if (!origin || !hostHeader) {
+  if (!hostHeader) {
+    sendForbidden(response, "请求缺少可信 Origin", "ORIGIN_REQUIRED");
+    return false;
+  }
+
+  if (!origin) {
+    if (
+      hostHeader === "127.0.0.1" ||
+      hostHeader === "127.0.0.1:4173" ||
+      hostHeader === "localhost" ||
+      hostHeader === "localhost:4173"
+    ) {
+      return true;
+    }
     sendForbidden(response, "请求缺少可信 Origin", "ORIGIN_REQUIRED");
     return false;
   }
@@ -1340,6 +1353,19 @@ function fileForUrl(url) {
   }
   if (pathname === "/admin" || pathname === "/admin/") {
     return join(root, "admin.html");
+  }
+  if (pathname.startsWith("/assets/")) {
+    const assetName = pathname.slice("/assets/".length);
+    const sourceCandidates = [
+      join(root, "dist", "assets", assetName),
+      join(root, "src", assetName),
+    ];
+    for (const candidate of sourceCandidates) {
+      if (existsSync(candidate) && statSync(candidate).isFile()) {
+        return candidate;
+      }
+    }
+    return join(root, "index.html");
   }
   const normalizedPath = normalize(pathname).replace(/^(\.\.[/\\])+/, "");
   const requested = normalizedPath === "/" ? "/index.html" : normalizedPath;

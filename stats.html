@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7faf8" />
+    <title>Sparta 统计页</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <style>
+      .stats-shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 34px 20px 48px;
+      }
+      .stats-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .stats-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 800;
+      }
+      .stats-mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        background: linear-gradient(145deg, #16a46a, #47c892);
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .stats-card {
+        padding: 20px;
+        border: 1px solid #e3ece7;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 16px 38px rgba(20, 44, 36, 0.08);
+      }
+      .stats-card span {
+        display: block;
+        color: #60726b;
+        font-size: 13px;
+      }
+      .stats-card strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 30px;
+      }
+      .stats-layout {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1.3fr 0.9fr;
+        gap: 16px;
+      }
+      .panel {
+        padding: 20px;
+        border: 1px solid #e3ece7;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 16px 38px rgba(20, 44, 36, 0.08);
+      }
+      .panel h2 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+      .app-list {
+        display: grid;
+        gap: 12px;
+      }
+      .app-row {
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid #edf2ef;
+        background: #fff;
+      }
+      .app-row strong {
+        display: block;
+      }
+      .app-row p {
+        margin: 6px 0 0;
+        color: #60726b;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .event-list {
+        display: grid;
+        gap: 10px;
+      }
+      .event-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px solid #edf2ef;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: #34433e;
+        font-size: 13px;
+      }
+      .stats-links {
+        margin-top: 18px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .stats-links a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid #dbe7e1;
+        background: #fff;
+        text-decoration: none;
+        color: #0b7648;
+        font-weight: 760;
+      }
+      .hint {
+        margin-top: 14px;
+        color: #60726b;
+        font-size: 13px;
+      }
+      @media (max-width: 860px) {
+        .stats-grid,
+        .stats-layout {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 640px) {
+        .stats-topbar,
+        .stats-layout {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stats-shell">
+      <header class="stats-topbar">
+        <div class="stats-brand">
+          <div class="stats-mark">官</div>
+          <div>
+            <div>Sparta 统计页</div>
+            <div style="color:#60726b;font-size:13px;font-weight:650;">商业展示 / 管理概览</div>
+          </div>
+        </div>
+        <div class="stats-links">
+          <a href="/">返回首页</a>
+          <a href="/admin">进入后台</a>
+          <a href="/商业介绍页.html">商业介绍页</a>
+        </div>
+      </header>
+
+      <section class="stats-grid" id="statCards"></section>
+
+      <section class="stats-layout">
+        <article class="panel">
+          <h2>重点收录</h2>
+          <div class="app-list" id="featuredApps"></div>
+        </article>
+        <article class="panel">
+          <h2>最近事件</h2>
+          <div class="event-list" id="recentEvents"></div>
+          <p class="hint" id="statsHint"></p>
+        </article>
+      </section>
+    </main>
+    <script type="module">
+      const statCards = document.querySelector("#statCards");
+      const featuredApps = document.querySelector("#featuredApps");
+      const recentEvents = document.querySelector("#recentEvents");
+      const statsHint = document.querySelector("#statsHint");
+
+      function createCard(label, value, helper = "") {
+        const article = document.createElement("article");
+        article.className = "stats-card";
+        article.innerHTML = `<span>${label}</span><strong>${value}</strong>${helper ? `<p class="hint">${helper}</p>` : ""}`;
+        return article;
+      }
+
+      function createRow(title, body) {
+        const article = document.createElement("article");
+        article.className = "app-row";
+        article.innerHTML = `<strong>${title}</strong><p>${body}</p>`;
+        return article;
+      }
+
+      function createEvent(action, time, status) {
+        const div = document.createElement("div");
+        div.className = "event-item";
+        div.innerHTML = `<span>${action}</span><span>${time}${status ? ` · ${status}` : ""}</span>`;
+        return div;
+      }
+
+      function formatTime(value) {
+        if (!value) return "暂无";
+        return new Date(value).toLocaleString("zh-CN", { hour12: false });
+      }
+
+      const response = await fetch("/api/stats");
+      const payload = await response.json();
+
+      statCards.append(
+        createCard("总收录", String(payload.counts?.total ?? 0)),
+        createCard("已通过", String(payload.counts?.approved ?? 0)),
+        createCard("待审核", String(payload.counts?.pending ?? 0)),
+        createCard("已驳回", String(payload.counts?.rejected ?? 0)),
+      );
+
+      (payload.featuredApps || []).forEach((item) => {
+        createRow(item.name, `有效：${item.valid ? "是" : "否"} · 权重：${item.weight ?? 50} · 更新：${formatTime(item.updatedAt)}`);
+        featuredApps.appendChild(
+          createRow(item.name, `官网：${item.officialSite || "未填写"}${item.android ? ` · 安卓：${item.android}` : ""}${item.ios ? ` · iOS：${item.ios}` : ""}`),
+        );
+      });
+
+      (payload.recentEvents || []).forEach((item) => {
+        recentEvents.appendChild(createEvent(item.action || "unknown", formatTime(item.createdAt), item.status || ""));
+      });
+
+      statsHint.textContent = `最近更新时间：${formatTime(payload.lastUpdatedAt)} · 最近备份：${formatTime(payload.lastBackupAt)}`;
+    </script>
+  </body>
+</html>

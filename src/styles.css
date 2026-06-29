@@ -145,6 +145,29 @@ input:focus-visible {
   font-weight: 680;
 }
 
+.brief-actions {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.brief-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(18, 160, 100, 0.22);
+  color: var(--green-dark);
+  background: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 760;
+}
+
 .phone {
   width: 390px;
   height: 844px;
@@ -665,7 +688,8 @@ input:focus-visible {
   }
 
   .desktop-brief {
-    display: none;
+    display: block;
+    margin: 0 auto 34px;
   }
 
   .phone {
@@ -689,6 +713,14 @@ input:focus-visible {
     margin-top: 0;
   }
 
+  .desktop-brief h1 {
+    font-size: 44px;
+  }
+
+  .brief-actions {
+    justify-content: flex-start;
+  }
+
   .brand-mark {
     box-shadow: none;
   }
@@ -702,7 +734,7 @@ input:focus-visible {
 
   .hero {
     max-width: 760px;
-    margin: 104px auto 0;
+    margin: 64px auto 0;
     text-align: center;
   }
 
@@ -870,6 +902,28 @@ input:focus-visible {
   margin: 10px 0 0;
   color: #60726b;
   font-size: 15px;
+}
+
+.admin-quicklinks {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-quicklinks a {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #dbe7e1;
+  background: #fff;
+  color: #0b7648;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 720;
 }
 
 .admin-header a {
