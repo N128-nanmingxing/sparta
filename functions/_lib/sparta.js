@@ -612,63 +612,6 @@ async function getOpsStatus(env) {
   };
 }
 
-async function getPublicStats(env) {
-  const counts = await env.DB.prepare(`
-    SELECT
-      COUNT(*) AS total,
-      SUM(CASE WHEN review_status = 'approved' THEN 1 ELSE 0 END) AS approved,
-      SUM(CASE WHEN review_status = 'pending' THEN 1 ELSE 0 END) AS pending,
-      SUM(CASE WHEN review_status = 'rejected' THEN 1 ELSE 0 END) AS rejected,
-      SUM(CASE WHEN valid = 1 THEN 1 ELSE 0 END) AS valid
-    FROM apps
-  `).first();
-  const lastBackup = await env.DB.prepare(`SELECT created_at FROM audit_logs WHERE action = 'backup_export' AND status = 'ok' ORDER BY id DESC LIMIT 1`).first();
-  const lastUpdate = await env.DB.prepare("SELECT MAX(updated_at) AS updated_at FROM apps").first();
-  const featured = await env.DB.prepare(`
-    SELECT * FROM apps
-    WHERE review_status = 'approved'
-    ORDER BY valid DESC, weight DESC, updated_at DESC
-    LIMIT 6
-  `).all();
-  const recent = await env.DB.prepare(`
-    SELECT action, status, created_at
-    FROM audit_logs
-    ORDER BY id DESC
-    LIMIT 6
-  `).all();
-
-  return {
-    environment: "cloudflare",
-    counts: {
-      total: Number(counts?.total || 0),
-      approved: Number(counts?.approved || 0),
-      pending: Number(counts?.pending || 0),
-      rejected: Number(counts?.rejected || 0),
-      valid: Number(counts?.valid || 0),
-    },
-    lastBackupAt: lastBackup?.created_at || "",
-    lastUpdatedAt: lastUpdate?.updated_at || "",
-    featuredApps: (featured.results || []).map((row) => {
-      const app = rowToApp(row);
-      return {
-        id: app.id,
-        name: app.name,
-        officialSite: app.officialSite,
-        android: app.android,
-        ios: app.ios,
-        valid: app.valid,
-        weight: app.weight,
-        updatedAt: app.updatedAt,
-      };
-    }),
-    recentEvents: (recent.results || []).map((row) => ({
-      action: row.action,
-      status: row.status,
-      createdAt: row.created_at,
-    })),
-  };
-}
-
 async function exportBackup(env, username) {
   const apps = await getAllApps(env);
   const audits = await env.DB.prepare("SELECT * FROM audit_logs ORDER BY id DESC").all();
@@ -813,10 +756,6 @@ async function handleApiRequest(context) {
   }
 
   await ensureSchema(env);
-
-  if (method === "GET" && pathname === "/api/stats") {
-    return makeJson(await getPublicStats(env));
-  }
 
   if (method === "GET" && pathname === "/api/admin/session") {
     const session = await getSession(env, request);
