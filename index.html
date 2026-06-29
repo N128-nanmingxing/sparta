@@ -15,7 +15,12 @@
             <button class="brand-button" type="button" aria-label="返回首页">
               <span class="brand-mark">官</span>
             </button>
-            <span class="trust-pill">无广告 · 无盗版</span>
+            <div class="app-header-actions">
+              <span class="trust-pill">无广告 · 无盗版</span>
+              <button id="siteRequestToggle" class="request-link" type="button" aria-expanded="false" aria-controls="siteRequestPanel">
+                网站建议
+              </button>
+            </div>
           </header>
 
           <section class="hero">
@@ -69,32 +74,27 @@
         </section>
       </main>
 
-      <aside class="request-fab" aria-label="网站建议留言板">
-        <button id="siteRequestToggle" class="request-fab-toggle" type="button" aria-expanded="false" aria-controls="siteRequestPanel">
-          网站建议
-        </button>
-        <section id="siteRequestPanel" class="request-fab-panel" hidden>
-          <div class="request-card-head">
-            <div>
-              <h2>想加什么网站</h2>
-              <p>留给我，我会在后台看。</p>
-            </div>
-            <button id="siteRequestClose" class="request-close" type="button" aria-label="关闭留言板">×</button>
+      <section id="siteRequestPanel" class="request-fab-panel" hidden>
+        <div class="request-card-head">
+          <div>
+            <h2>想加什么网站</h2>
+            <p>留给我，我会在后台看。</p>
           </div>
-          <form id="siteRequestForm" class="request-form" autocomplete="off">
-            <label class="sr-only" for="siteRequestName">网站名称</label>
-            <input id="siteRequestName" maxlength="60" placeholder="网站名称 / APP 名称" />
-            <label class="sr-only" for="siteRequestWebsite">网站地址</label>
-            <input id="siteRequestWebsite" maxlength="200" placeholder="网站地址，可选" />
-            <label class="sr-only" for="siteRequestContact">联系方式</label>
-            <input id="siteRequestContact" maxlength="120" placeholder="联系方式，可选" />
-            <label class="sr-only" for="siteRequestNote">留言内容</label>
-            <textarea id="siteRequestNote" rows="3" maxlength="500" placeholder="想加什么、为什么要加"></textarea>
-            <button class="request-button" type="submit">提交留言</button>
-            <p class="request-message" id="siteRequestMessage" role="status"></p>
-          </form>
-        </section>
-      </aside>
+          <button id="siteRequestClose" class="request-close" type="button" aria-label="关闭留言板">×</button>
+        </div>
+        <form id="siteRequestForm" class="request-form" autocomplete="off">
+          <label class="sr-only" for="siteRequestName">网站名称</label>
+          <input id="siteRequestName" maxlength="60" placeholder="网站名称 / APP 名称" />
+          <label class="sr-only" for="siteRequestWebsite">网站地址</label>
+          <input id="siteRequestWebsite" maxlength="200" placeholder="网站地址，可选" />
+          <label class="sr-only" for="siteRequestContact">联系方式</label>
+          <input id="siteRequestContact" maxlength="120" placeholder="联系方式，可选" />
+          <label class="sr-only" for="siteRequestNote">留言内容</label>
+          <textarea id="siteRequestNote" rows="3" maxlength="500" placeholder="想加什么、为什么要加"></textarea>
+          <button class="request-button" type="submit">提交留言</button>
+          <p class="request-message" id="siteRequestMessage" role="status"></p>
+        </form>
+      </section>
     </div>
 
     <script type="module" src="/assets/app.js"></script>

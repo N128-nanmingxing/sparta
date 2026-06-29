@@ -172,6 +172,15 @@ input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 3;
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .brand-button {
@@ -210,6 +219,17 @@ input:focus-visible {
   border-radius: 999px;
   background: #edf8f2;
   color: #188455;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.request-link {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: #202c28;
+  background: #eef3f0;
   font-size: 12px;
   font-weight: 760;
 }
@@ -1757,23 +1777,38 @@ input:focus-visible {
 }
 
 @media (max-width: 860px) {
-  .request-fab {
-    top: calc(86px + env(safe-area-inset-top, 0px));
-    right: 14px;
-    bottom: auto;
-    left: auto;
-    justify-items: end;
+  .app-header-actions {
+    gap: 8px;
   }
 
-  .request-fab-toggle {
-    margin-left: 0;
+  .trust-pill,
+  .request-link {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .request-link {
+    white-space: nowrap;
+  }
+
+  .request-fab {
+    position: fixed;
+    top: calc(76px + env(safe-area-inset-top, 0px));
+    right: 14px;
+    left: 14px;
+    bottom: auto;
+    z-index: 12;
+    display: block;
+    pointer-events: none;
   }
 
   .request-fab-panel {
     width: min(100%, 420px);
     max-height: calc(100vh - 170px);
     overflow: auto;
-    margin-left: 0;
-    margin-right: 0;
+    margin: 0 auto;
+    pointer-events: auto;
+    transform: translateY(0);
   }
 }
