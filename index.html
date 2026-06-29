@@ -15,12 +15,7 @@
             <button class="brand-button" type="button" aria-label="返回首页">
               <span class="brand-mark">官</span>
             </button>
-            <div class="app-header-actions">
-              <span class="trust-pill">无广告 · 无盗版</span>
-              <button id="siteRequestToggle" class="request-link" type="button" aria-expanded="false" aria-controls="siteRequestPanel">
-                网站建议
-              </button>
-            </div>
+            <span class="trust-pill">无广告 · 无盗版</span>
           </header>
 
           <section class="hero">
@@ -74,7 +69,11 @@
         </section>
       </main>
 
-      <section id="siteRequestPanel" class="request-fab-panel" hidden>
+      <aside class="request-fab" aria-label="网站建议留言板">
+        <button id="siteRequestToggle" class="request-fab-toggle" type="button" aria-expanded="false" aria-controls="siteRequestPanel">
+          网站建议
+        </button>
+        <section id="siteRequestPanel" class="request-fab-panel" hidden>
         <div class="request-card-head">
           <div>
             <h2>想加什么网站</h2>
@@ -95,6 +94,7 @@
           <p class="request-message" id="siteRequestMessage" role="status"></p>
         </form>
       </section>
+      </aside>
     </div>
 
     <script type="module" src="/assets/app.js"></script>
