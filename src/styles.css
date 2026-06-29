@@ -1755,3 +1755,22 @@ input:focus-visible {
     font-size: 15px;
   }
 }
+
+@media (max-width: 860px) {
+  .request-fab {
+    left: 14px;
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px) + 72px);
+    justify-items: stretch;
+  }
+
+  .request-fab-toggle {
+    margin-left: auto;
+  }
+
+  .request-fab-panel {
+    width: min(100%, 420px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
