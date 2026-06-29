@@ -37,6 +37,9 @@ const refreshOpsButton = document.querySelector("#refreshOpsButton");
 const backupButton = document.querySelector("#backupButton");
 const opsCards = document.querySelector("#opsCards");
 const opsMessage = document.querySelector("#opsMessage");
+const requestsMessage = document.querySelector("#requestsMessage");
+const requestList = document.querySelector("#requestList");
+const refreshRequestsButton = document.querySelector("#refreshRequestsButton");
 const backupMessage = document.querySelector("#backupMessage");
 const auditLog = document.querySelector("#auditLog");
 
@@ -80,6 +83,7 @@ const blockImportLabels = new Map([
   ["备注", "reviewNote"],
 ]);
 let apps = [];
+let siteRequests = [];
 let currentSession = null;
 let csrfToken = "";
 
@@ -601,6 +605,58 @@ function renderAuditLog(records = []) {
   });
 }
 
+function formatRequestStatus(status) {
+  if (status === "reviewed") return "已查看";
+  if (status === "archived") return "已归档";
+  return "新留言";
+}
+
+function renderRequestList(records = []) {
+  clearNode(requestList);
+  if (!records.length) {
+    requestList.appendChild(createElement("div", { className: "admin-empty", text: "暂无网站建议" }));
+    return;
+  }
+
+  records.forEach((item) => {
+    const row = createElement("article", {
+      className: "audit-item request-item",
+      dataset: { id: String(item.id) },
+    });
+    const head = createElement("div", { className: "audit-item-head" });
+    head.append(
+      createElement("strong", { text: item.name || "未命名" }),
+      createElement("span", { text: item.createdAt || "" }),
+    );
+
+    const meta = [
+      item.status ? `状态：${formatRequestStatus(item.status)}` : "",
+      item.website ? `网站：${item.website}` : "",
+      item.contact ? `联系：${item.contact}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    const actions = createElement("div", { className: "row-actions" });
+    actions.append(
+      createElement("button", { type: "button", text: "标记已看", dataset: { action: "review-request" } }),
+      createElement("button", { type: "button", text: "归档", dataset: { action: "archive-request" } }),
+      createElement("button", { type: "button", text: "删除", dataset: { action: "delete-request" } }),
+    );
+
+    row.append(
+      head,
+      createElement("p", { className: "audit-item-meta", text: meta || "无附加信息" }),
+      createElement("p", {
+        className: "audit-item-detail",
+        text: item.note || "无留言内容",
+      }),
+      actions,
+    );
+    requestList.appendChild(row);
+  });
+}
+
 function renderOpsStatus(payload) {
   clearNode(opsCards);
   [
@@ -619,6 +675,21 @@ function renderOpsStatus(payload) {
   ].forEach((card) => opsCards.appendChild(card));
 
   renderAuditLog(payload.recentAudits || []);
+}
+
+async function loadSiteRequests() {
+  try {
+    const payload = await api("/api/site-requests", {
+      headers: {},
+    });
+    siteRequests = payload.requests || [];
+    renderRequestList(siteRequests);
+    setMessage(requestsMessage, "留言已刷新");
+  } catch (error) {
+    clearNode(requestList);
+    requestList.appendChild(createElement("div", { className: "admin-empty", text: error.message }));
+    setMessage(requestsMessage, error.message, "error");
+  }
 }
 
 async function loadOpsStatus() {
@@ -654,6 +725,38 @@ function editApp(id) {
   formTitle.textContent = `编辑：${item.name}`;
   setMessage(formMessage, "正在编辑现有地址，保存后会覆盖并更新审核信息。", "info");
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function findRequestById(id) {
+  return siteRequests.find((item) => String(item.id) === String(id));
+}
+
+async function updateRequestStatus(id, status) {
+  try {
+    await api(`/api/site-requests/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    await loadSiteRequests();
+  } catch (error) {
+    setMessage(requestsMessage, error.message, "error");
+  }
+}
+
+async function deleteRequest(id) {
+  const item = findRequestById(id);
+  if (!item) return;
+  const confirmed = window.confirm(`确认删除留言“${item.name}”？`);
+  if (!confirmed) return;
+
+  try {
+    await api(`/api/site-requests/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    await loadSiteRequests();
+  } catch (error) {
+    setMessage(requestsMessage, error.message, "error");
+  }
 }
 
 async function deleteApp(id) {
@@ -754,6 +857,25 @@ appList.addEventListener("click", (event) => {
   }
 });
 
+requestList.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  const row = event.target.closest(".request-item");
+  if (!button || !row) return;
+
+  const id = row.dataset.id;
+  if (!id) return;
+
+  if (button.dataset.action === "review-request") {
+    updateRequestStatus(id, "reviewed");
+  }
+  if (button.dataset.action === "archive-request") {
+    updateRequestStatus(id, "archived");
+  }
+  if (button.dataset.action === "delete-request") {
+    deleteRequest(id);
+  }
+});
+
 csvFile.addEventListener("change", async () => {
   const file = csvFile.files?.[0];
   if (!file) return;
@@ -845,6 +967,11 @@ refreshOpsButton.addEventListener("click", async () => {
   await loadOpsStatus();
 });
 
+refreshRequestsButton.addEventListener("click", async () => {
+  setMessage(requestsMessage, "正在刷新留言...", "info");
+  await loadSiteRequests();
+});
+
 backupButton.addEventListener("click", async () => {
   try {
     setMessage(backupMessage, "正在生成备份文件...", "info");
@@ -893,6 +1020,7 @@ async function initAdmin() {
   if (hasSession) {
     await loadApps();
     await loadOpsStatus();
+    await loadSiteRequests();
   }
 }
 

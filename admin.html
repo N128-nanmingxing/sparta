@@ -158,6 +158,19 @@ https://www.meituan.com/mobile"></textarea>
           <section class="admin-panel backup-panel">
             <div class="panel-title">
               <div>
+                <h2>网站建议</h2>
+                <p>前端主页收集到的留言，会在这里统一查看。</p>
+              </div>
+              <button type="button" id="refreshRequestsButton">刷新留言</button>
+            </div>
+            <p class="csv-help">可以把用户想加的网站、联系方式和备注一起查看，方便后续补收录。</p>
+            <p class="admin-message" id="requestsMessage" role="status"></p>
+            <div class="audit-log" id="requestList"></div>
+          </section>
+
+          <section class="admin-panel backup-panel">
+            <div class="panel-title">
+              <div>
                 <h2>备份导出</h2>
                 <p>导出当前 APP 数据和审计日志，便于异地保存。</p>
               </div>

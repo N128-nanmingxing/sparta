@@ -18,6 +18,15 @@ const elements = {
   clear: document.querySelector("#clearButton"),
   state: document.querySelector("#stateRegion"),
   toast: document.querySelector("#toast"),
+  siteRequestForm: document.querySelector("#siteRequestForm"),
+  siteRequestName: document.querySelector("#siteRequestName"),
+  siteRequestWebsite: document.querySelector("#siteRequestWebsite"),
+  siteRequestContact: document.querySelector("#siteRequestContact"),
+  siteRequestNote: document.querySelector("#siteRequestNote"),
+  siteRequestMessage: document.querySelector("#siteRequestMessage"),
+  siteRequestToggle: document.querySelector("#siteRequestToggle"),
+  siteRequestClose: document.querySelector("#siteRequestClose"),
+  siteRequestPanel: document.querySelector("#siteRequestPanel"),
   routes: [...document.querySelectorAll(".app-screen")],
 };
 
@@ -51,6 +60,21 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => {
     elements.toast.classList.remove("is-visible");
   }, 1800);
+}
+
+function setRequestMessage(message, type = "ok") {
+  if (!elements.siteRequestMessage) return;
+  elements.siteRequestMessage.textContent = message;
+  elements.siteRequestMessage.dataset.type = type;
+}
+
+function setRequestPanelOpen(open) {
+  if (!elements.siteRequestPanel || !elements.siteRequestToggle) return;
+  elements.siteRequestPanel.hidden = !open;
+  elements.siteRequestToggle.setAttribute("aria-expanded", String(open));
+  if (open) {
+    elements.siteRequestName?.focus({ preventScroll: true });
+  }
 }
 
 function setRoute(routeName) {
@@ -360,6 +384,45 @@ function updateClearButton() {
   elements.clear.classList.toggle("is-visible", elements.input.value.length > 0);
 }
 
+async function submitSiteRequest(event) {
+  event.preventDefault();
+  const name = elements.siteRequestName.value.trim();
+  const website = elements.siteRequestWebsite.value.trim();
+  const contact = elements.siteRequestContact.value.trim();
+  const note = elements.siteRequestNote.value.trim();
+
+  if (!name) {
+    setRequestMessage("先填一个网站名称吧", "error");
+    return;
+  }
+  if (!website && !note) {
+    setRequestMessage("至少写网站地址或留言内容中的一项", "error");
+    return;
+  }
+
+  if (!hasBackend) {
+    setRequestMessage("当前是本地文件方式，无法提交留言，请通过本地服务打开", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/site-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, website, contact, note }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || "提交失败");
+    }
+    elements.siteRequestForm.reset();
+    setRequestMessage("已收到，我会在后台查看", "ok");
+    window.setTimeout(() => setRequestPanelOpen(false), 900);
+  } catch (error) {
+    setRequestMessage(error.message, "error");
+  }
+}
+
 function cleanInputValue() {
   const cleaned = cleanQuery(elements.input.value);
   if (elements.input.value !== cleaned) {
@@ -395,6 +458,21 @@ elements.clear.addEventListener("click", () => {
   renderInitial();
   elements.input.focus();
 });
+
+if (elements.siteRequestForm) {
+  elements.siteRequestForm.addEventListener("submit", submitSiteRequest);
+}
+
+if (elements.siteRequestToggle) {
+  elements.siteRequestToggle.addEventListener("click", () => {
+    const isOpen = elements.siteRequestToggle.getAttribute("aria-expanded") === "true";
+    setRequestPanelOpen(!isOpen);
+  });
+}
+
+if (elements.siteRequestClose) {
+  elements.siteRequestClose.addEventListener("click", () => setRequestPanelOpen(false));
+}
 
 document.querySelectorAll("[data-page]").forEach((button) => {
   button.addEventListener("click", () => setRoute(button.dataset.page));

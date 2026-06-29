@@ -104,11 +104,22 @@ function createDatabase() {
       detail_json TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS site_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      website TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      contact TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'new',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_apps_name ON apps(name);
     CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC);
     CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC);
   `);
   migrateLegacyApps(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
@@ -202,6 +213,30 @@ function getLastBackupAudit() {
   return row ? parseAuditRow(row) : null;
 }
 
+function parseSiteRequestRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    website: row.website,
+    note: row.note,
+    contact: row.contact,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function getSiteRequests(limit = 80) {
+  return db
+    .prepare(`
+      SELECT * FROM site_requests
+      ORDER BY id DESC
+      LIMIT ?
+    `)
+    .all(limit)
+    .map(parseSiteRequestRow);
+}
+
 function getAdminOpsStatus() {
   const summary =
     db.prepare(`
@@ -236,6 +271,47 @@ function getAdminOpsStatus() {
     lastBackupAt: lastBackup?.createdAt || "",
     recentAudits: getRecentAudits(),
   };
+}
+
+function createSiteRequest(input) {
+  const name = sanitizeText(input.name, 60);
+  const website = sanitizeText(input.website, 200);
+  const note = sanitizeText(input.note, 500);
+  const contact = sanitizeText(input.contact, 120);
+
+  if (!name) {
+    throw new Error("请填写想添加的网站名称");
+  }
+  if (!note && !website) {
+    throw new Error("请至少填写网站地址或需求说明");
+  }
+
+  const now = nowIso();
+  const result = db
+    .prepare(`
+      INSERT INTO site_requests (name, website, note, contact, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 'new', ?, ?)
+    `)
+    .run(name, website, note, contact, now, now);
+
+  return parseSiteRequestRow(
+    db.prepare("SELECT * FROM site_requests WHERE id = ?").get(result.lastInsertRowid),
+  );
+}
+
+function updateSiteRequestStatus(id, status) {
+  const nextStatus = ["new", "reviewed", "archived"].includes(status) ? status : "new";
+  const row = db.prepare("SELECT * FROM site_requests WHERE id = ?").get(id);
+  if (!row) {
+    return null;
+  }
+  const now = nowIso();
+  db.prepare("UPDATE site_requests SET status = ?, updated_at = ? WHERE id = ?").run(nextStatus, now, id);
+  return parseSiteRequestRow(db.prepare("SELECT * FROM site_requests WHERE id = ?").get(id));
+}
+
+function deleteSiteRequest(id) {
+  return db.prepare("DELETE FROM site_requests WHERE id = ?").run(id);
 }
 
 function exportBackupSnapshot(username) {
@@ -1140,6 +1216,22 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/site-requests") {
+    try {
+      const body = JSON.parse(await readBody(request));
+      const created = createSiteRequest(body);
+      recordAudit("site_request_create", {
+        request,
+        status: "ok",
+        detail: { name: created.name, website: created.website },
+      });
+      sendJson(response, 200, { ok: true, request: created });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || "提交失败" });
+    }
+    return true;
+  }
+
   if (url.pathname.startsWith("/api/admin/ops")) {
     const session = requireAdminSession(request, response);
     if (!session) {
@@ -1173,6 +1265,67 @@ async function handleApi(request, response, url) {
         ...securityHeaders,
       });
       response.end(JSON.stringify(snapshot, null, 2));
+      return true;
+    }
+
+    sendJson(response, 404, { error: "接口不存在" });
+    return true;
+  }
+
+  if (url.pathname.startsWith("/api/site-requests")) {
+    const session = requireAdminSession(request, response);
+    if (!session) {
+      return true;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/site-requests") {
+      sendJson(response, 200, { requests: getSiteRequests() });
+      return true;
+    }
+
+    if (request.method === "PATCH" && /^\/api\/site-requests\/\d+$/.test(url.pathname)) {
+      if (!requireCsrfToken(request, response, session)) {
+        return true;
+      }
+      try {
+        const id = Number(url.pathname.split("/").pop());
+        const body = JSON.parse(await readBody(request));
+        const updated = updateSiteRequestStatus(id, body.status);
+        if (!updated) {
+          sendJson(response, 404, { error: "留言不存在" });
+          return true;
+        }
+        recordAudit("site_request_update", {
+          request,
+          username: session.username,
+          targetId: String(id),
+          detail: { status: updated.status, name: updated.name },
+        });
+        sendJson(response, 200, { ok: true, request: updated });
+      } catch (error) {
+        sendJson(response, 400, { error: error.message || "更新失败" });
+      }
+      return true;
+    }
+
+    if (request.method === "DELETE" && /^\/api\/site-requests\/\d+$/.test(url.pathname)) {
+      if (!requireCsrfToken(request, response, session)) {
+        return true;
+      }
+      const id = Number(url.pathname.split("/").pop());
+      const existing = db.prepare("SELECT * FROM site_requests WHERE id = ?").get(id);
+      if (!existing) {
+        sendJson(response, 404, { error: "留言不存在" });
+        return true;
+      }
+      deleteSiteRequest(id);
+      recordAudit("site_request_delete", {
+        request,
+        username: session.username,
+        targetId: String(id),
+        detail: { name: existing.name },
+      });
+      sendJson(response, 200, { ok: true });
       return true;
     }
 
