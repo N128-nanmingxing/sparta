@@ -15,7 +15,7 @@ const host = process.env.HOST || "127.0.0.1";
 const isProduction = process.env.NODE_ENV === "production";
 const adminUsername = process.env.ADMIN_USERNAME || (isProduction ? "" : "admin");
 const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? "" : "as758521");
-const adminGateKey = process.env.ADMIN_GATE_KEY || adminPassword;
+const adminGateKey = process.env.ADMIN_GATE_KEY || (isProduction ? "" : "wddsskuang");
 const sessionCookieName = "sparta_admin_session";
 const sessionTtlMs = 1000 * 60 * 60 * 12;
 const loginAttemptWindowMs = 1000 * 60 * 10;

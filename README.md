@@ -17,6 +17,7 @@ Local development defaults:
 
 - admin username: `admin`
 - admin password: `as758521`
+- admin gate key: `wddsskuang`
 
 These defaults are for local development only. In production, the service expects explicit `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
 
@@ -48,10 +49,11 @@ Before sharing the deployed app publicly, make sure:
 
 1. Set a real admin username in `ADMIN_USERNAME`
 2. Set a strong admin password in `ADMIN_PASSWORD`
-3. Keep `DATA_DIR` on the persistent disk mount so SQLite survives deploys and restarts
-4. Confirm the service is running with `NODE_ENV=production`
-5. Verify `/healthz` returns `authConfigured: true`
-6. Export a backup after initial data migration and after any large batch import
+3. Set a separate gate key in `ADMIN_GATE_KEY`
+4. Keep `DATA_DIR` on the persistent disk mount so SQLite survives deploys and restarts
+5. Confirm the service is running with `NODE_ENV=production`
+6. Verify `/healthz` returns `authConfigured: true`
+7. Export a backup after initial data migration and after any large batch import
 
 ## Built-in production safeguards
 
