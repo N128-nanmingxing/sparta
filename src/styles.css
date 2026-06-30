@@ -276,6 +276,15 @@ input:focus-visible {
   box-shadow: 0 14px 34px rgba(18, 160, 100, 0.13);
 }
 
+.search-promise {
+  margin: 16px 0 0;
+  color: var(--green-dark);
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .request-fab {
   position: fixed;
   right: 18px;
@@ -484,11 +493,6 @@ input:focus-visible {
   margin: 8px auto 0;
   font-size: 14px;
   line-height: 1.55;
-}
-
-.promise-line {
-  color: var(--green-dark) !important;
-  font-weight: 760;
 }
 
 .empty-mark,
@@ -806,11 +810,11 @@ input:focus-visible {
   }
 
   .prototype-shell {
-    width: min(980px, 100%);
-    min-height: 0;
+    width: 100%;
+    min-height: 100vh;
     display: block;
     margin: 0 auto;
-    padding: clamp(24px, 3.4vh, 36px) clamp(22px, 4vw, 40px) 48px;
+    padding: clamp(28px, 3.4vh, 40px) clamp(44px, 5vw, 96px) 48px;
   }
 
   .desktop-brief {
@@ -829,7 +833,7 @@ input:focus-visible {
   }
 
   .app-screen {
-    width: min(760px, 100%);
+    width: 100%;
     min-height: auto;
     height: auto;
     margin: 0 auto;
@@ -838,13 +842,17 @@ input:focus-visible {
 
   .app-header {
     width: 100%;
-    margin-right: auto;
-    margin-left: auto;
     margin-top: 0;
+    gap: 16px;
   }
 
   .brand-mark {
     box-shadow: none;
+  }
+
+  .brand-copy {
+    flex: 0 1 auto;
+    margin-right: auto;
   }
 
   .trust-pill {
@@ -882,6 +890,12 @@ input:focus-visible {
     border-radius: 20px;
     border-color: #e4ece8;
     box-shadow: 0 16px 38px rgba(19, 42, 34, 0.08);
+  }
+
+  .search-promise {
+    width: min(680px, 100%);
+    margin: 16px auto 0;
+    font-size: 15px;
   }
 
   #searchInput {
@@ -956,13 +970,19 @@ input:focus-visible {
   }
 
   .legal-links {
+    width: min(760px, 100%);
     margin-top: 16px;
+    margin-right: auto;
+    margin-left: auto;
     padding: 0;
   }
 
   .compliance-note {
+    width: min(760px, 100%);
     margin-top: 8px;
     margin-bottom: 0;
+    margin-right: auto;
+    margin-left: auto;
   }
 
   .legal-screen {
