@@ -691,6 +691,15 @@ input:focus-visible {
   line-height: 1.35;
 }
 
+.app-version {
+  margin: -8px 0 18px;
+  color: rgba(34, 53, 47, 0.38);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
 .link-action[disabled] {
   cursor: not-allowed;
   color: #8b9691;
@@ -983,6 +992,11 @@ input:focus-visible {
     margin-bottom: 0;
     margin-right: auto;
     margin-left: auto;
+  }
+
+  .app-version {
+    width: min(760px, 100%);
+    margin: 6px auto 0;
   }
 
   .legal-screen {
