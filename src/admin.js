@@ -1008,7 +1008,7 @@ loginForm.addEventListener("submit", async (event) => {
   }
 });
 
-gateForm.addEventListener("submit", async (event) => {
+gateForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!gateKey.value.trim()) {
     setMessage(gateMessage, "请输入入口口令", "error");
@@ -1025,6 +1025,7 @@ gateForm.addEventListener("submit", async (event) => {
     });
     gateKey.value = "";
     gateVerified = true;
+    setMessage(gateMessage, "入口验证通过，正在进入登录页...", "info");
     showAuthScreen();
     setMessage(loginMessage, "入口验证通过，请登录后台", "info");
   } catch (error) {
@@ -1034,7 +1035,7 @@ gateForm.addEventListener("submit", async (event) => {
   }
 });
 
-gateKey.addEventListener("input", () => {
+gateKey?.addEventListener("input", () => {
   if (gateKey.value) {
     setMessage(gateMessage, "已输入入口口令，可以点击进入后台", "info");
     return;
@@ -1042,7 +1043,7 @@ gateKey.addEventListener("input", () => {
   setMessage(gateMessage, "");
 });
 
-gateKeyToggle.addEventListener("click", () => {
+gateKeyToggle?.addEventListener("click", () => {
   const shouldShow = gateKey.type === "password";
   gateKey.type = shouldShow ? "text" : "password";
   gateKeyToggle.textContent = shouldShow ? "隐藏" : "显示";
