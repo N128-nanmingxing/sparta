@@ -5,12 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f6faf7" />
     <title>地址信息库后台</title>
-    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260630-layout10" />
   </head>
   <body class="admin-page">
     <main class="admin-shell">
       <section class="admin-auth-shell" id="authShell">
-        <section class="admin-panel admin-auth-panel">
+        <section class="admin-panel admin-auth-panel" id="gatePanel">
+          <div>
+            <span class="admin-kicker">后台入口</span>
+            <h1>入口验证</h1>
+            <p>通过入口口令后才能进入管理员登录。</p>
+          </div>
+          <form class="app-form" id="gateForm">
+            <label>
+              <span>入口口令</span>
+              <div class="password-field">
+                <input id="gateKey" type="password" autocomplete="current-password" placeholder="请输入后台入口口令" />
+                <button type="button" id="gateKeyToggle" aria-controls="gateKey" aria-pressed="false">显示</button>
+              </div>
+            </label>
+            <button class="primary-admin-button" type="submit">进入后台</button>
+            <p class="admin-message" id="gateMessage" role="status"></p>
+          </form>
+        </section>
+        <section class="admin-panel admin-auth-panel" id="loginPanel" hidden>
           <div>
             <span class="admin-kicker">受保护后台</span>
             <h1>管理员登录</h1>
@@ -100,7 +118,7 @@
                 <span>审核状态</span>
                 <select id="reviewStatus">
                   <option value="pending">待审核</option>
-                  <option value="approved">已通过</option>
+                  <option value="approved" selected>已通过</option>
                   <option value="rejected">已驳回</option>
                 </select>
               </label>
@@ -115,7 +133,7 @@
 
             <label>
               <span>审核备注</span>
-              <textarea id="reviewNote" rows="4" placeholder="记录域名核验结果、驳回原因或补充说明"></textarea>
+              <textarea id="reviewNote" rows="4" placeholder="记录域名核验结果、驳回原因或补充说明">人工核验官方域名后添加</textarea>
             </label>
 
             <button class="primary-admin-button" type="submit">保存到信息库</button>
@@ -158,6 +176,19 @@ https://www.meituan.com/mobile"></textarea>
           <section class="admin-panel backup-panel">
             <div class="panel-title">
               <div>
+                <h2>网站建议</h2>
+                <p>前端主页收集到的留言，会在这里统一查看。</p>
+              </div>
+              <button type="button" id="refreshRequestsButton">刷新留言</button>
+            </div>
+            <p class="csv-help">可以把用户想加的网站、联系方式和备注一起查看，方便后续补收录。</p>
+            <p class="admin-message" id="requestsMessage" role="status"></p>
+            <div class="audit-log" id="requestList"></div>
+          </section>
+
+          <section class="admin-panel backup-panel">
+            <div class="panel-title">
+              <div>
                 <h2>备份导出</h2>
                 <p>导出当前 APP 数据和审计日志，便于异地保存。</p>
               </div>
@@ -188,6 +219,6 @@ https://www.meituan.com/mobile"></textarea>
       </section>
     </main>
 
-    <script type="module" src="/assets/admin.js"></script>
+    <script type="module" src="/assets/admin.js?v=20260630-gate-feedback2"></script>
   </body>
 </html>
