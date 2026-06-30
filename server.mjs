@@ -20,6 +20,8 @@ const sessionTtlMs = 1000 * 60 * 60 * 12;
 const loginAttemptWindowMs = 1000 * 60 * 10;
 const loginAttemptLimit = 5;
 const loginBlockMs = 1000 * 60 * 15;
+const siteRequestWindowMs = 1000 * 60 * 10;
+const siteRequestLimit = 5;
 const securityHeaders = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
@@ -115,12 +117,20 @@ function createDatabase() {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS request_limits (
+      scope TEXT NOT NULL,
+      ip TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      window_started_at INTEGER NOT NULL,
+      PRIMARY KEY (scope, ip)
+    );
     CREATE INDEX IF NOT EXISTS idx_apps_name ON apps(name);
     CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC);
     CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status);
     CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_request_limits_window ON request_limits(window_started_at);
   `);
   migrateSeedApps(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
@@ -1013,6 +1023,34 @@ function registerLoginFailure(ip) {
   };
 }
 
+function checkRequestLimit(scope, ip, limit, windowMs) {
+  const now = Date.now();
+  const safeScope = sanitizeText(scope, 40);
+  const safeIp = sanitizeText(ip, 80);
+  db.prepare("DELETE FROM request_limits WHERE window_started_at < ?").run(now - windowMs * 2);
+  const row = db.prepare("SELECT * FROM request_limits WHERE scope = ? AND ip = ?").get(safeScope, safeIp);
+
+  if (!row || Number(row.window_started_at || 0) + windowMs <= now) {
+    db.prepare(`
+      INSERT INTO request_limits (scope, ip, count, window_started_at)
+      VALUES (?, ?, 1, ?)
+      ON CONFLICT(scope, ip) DO UPDATE SET count = 1, window_started_at = excluded.window_started_at
+    `).run(safeScope, safeIp, now);
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  const nextCount = Number(row.count || 0) + 1;
+  db.prepare("UPDATE request_limits SET count = ? WHERE scope = ? AND ip = ?").run(nextCount, safeScope, safeIp);
+
+  if (nextCount > limit) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((Number(row.window_started_at) + windowMs - now) / 1000)),
+    };
+  }
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
 function clearLoginFailures(ip) {
   loginAttempts.delete(sanitizeText(ip, 80));
 }
@@ -1204,6 +1242,20 @@ async function handleApi(request, response, url) {
 
   if (request.method === "POST" && url.pathname === "/api/site-requests") {
     try {
+      const limit = checkRequestLimit("site_request", getRequestIp(request), siteRequestLimit, siteRequestWindowMs);
+      if (!limit.allowed) {
+        recordAudit("site_request_rate_limited", {
+          request,
+          status: "blocked",
+          detail: { retryAfterSeconds: String(limit.retryAfterSeconds) },
+        });
+        sendJson(response, 429, {
+          error: `提交太频繁，请 ${limit.retryAfterSeconds} 秒后再试`,
+          code: "SITE_REQUEST_RATE_LIMITED",
+          retryAfterSeconds: limit.retryAfterSeconds,
+        });
+        return true;
+      }
       const body = JSON.parse(await readBody(request));
       const created = createSiteRequest(body);
       recordAudit("site_request_create", {

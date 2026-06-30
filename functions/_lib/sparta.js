@@ -4,6 +4,8 @@ const sessionTtlMs = 1000 * 60 * 60 * 12;
 const loginAttemptWindowMs = 1000 * 60 * 10;
 const loginAttemptLimit = 5;
 const loginBlockMs = 1000 * 60 * 15;
+const siteRequestWindowMs = 1000 * 60 * 10;
+const siteRequestLimit = 5;
 const sensitiveWords = ["赌博", "博彩", "色情", "私服", "外挂", "破解", "破解版", "非法", "病毒", "盗版", "洗钱"];
 const correctionMap = new Map([
   ["微心", "微信"],
@@ -305,6 +307,13 @@ async function ensureSchema(env) {
         last_failure_at INTEGER NOT NULL DEFAULT 0,
         blocked_until INTEGER NOT NULL DEFAULT 0
       )`,
+      `CREATE TABLE IF NOT EXISTS request_limits (
+        scope TEXT NOT NULL,
+        ip TEXT NOT NULL,
+        count INTEGER NOT NULL DEFAULT 0,
+        window_started_at INTEGER NOT NULL,
+        PRIMARY KEY (scope, ip)
+      )`,
       `CREATE TABLE IF NOT EXISTS site_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -321,6 +330,7 @@ async function ensureSchema(env) {
       "CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
       "CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)",
       "CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC)",
+      "CREATE INDEX IF NOT EXISTS idx_request_limits_window ON request_limits(window_started_at)",
     ];
 
     for (const statement of schemaStatements) {
@@ -559,6 +569,38 @@ async function registerLoginFailure(env, ip) {
 
 async function clearLoginFailures(env, ip) {
   await env.DB.prepare("DELETE FROM login_attempts WHERE ip = ?").bind(ip).run();
+}
+
+async function checkRequestLimit(env, scope, ip, limit, windowMs) {
+  const now = Date.now();
+  const safeScope = sanitizeText(scope, 40);
+  const safeIp = sanitizeText(ip, 80);
+  await env.DB.prepare("DELETE FROM request_limits WHERE window_started_at < ?").bind(now - windowMs * 2).run();
+  const row = await env.DB.prepare("SELECT * FROM request_limits WHERE scope = ? AND ip = ?").bind(safeScope, safeIp).first();
+
+  if (!row || Number(row.window_started_at || 0) + windowMs <= now) {
+    await env.DB.prepare(
+      `INSERT INTO request_limits (scope, ip, count, window_started_at)
+       VALUES (?, ?, 1, ?)
+       ON CONFLICT(scope, ip) DO UPDATE SET count = 1, window_started_at = excluded.window_started_at`,
+    )
+      .bind(safeScope, safeIp, now)
+      .run();
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  const nextCount = Number(row.count || 0) + 1;
+  await env.DB.prepare("UPDATE request_limits SET count = ? WHERE scope = ? AND ip = ?")
+    .bind(nextCount, safeScope, safeIp)
+    .run();
+
+  if (nextCount > limit) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((Number(row.window_started_at) + windowMs - now) / 1000)),
+    };
+  }
+  return { allowed: true, retryAfterSeconds: 0 };
 }
 
 function requireTrustedOrigin(request) {
@@ -904,6 +946,23 @@ async function handleApiRequest(context) {
 
   if (method === "POST" && pathname === "/api/site-requests") {
     try {
+      const limit = await checkRequestLimit(env, "site_request", getRequestIp(request), siteRequestLimit, siteRequestWindowMs);
+      if (!limit.allowed) {
+        await recordAudit(env, {
+          request,
+          action: "site_request_rate_limited",
+          status: "blocked",
+          detail: { retryAfterSeconds: String(limit.retryAfterSeconds) },
+        });
+        return makeJson(
+          {
+            error: `提交太频繁，请 ${limit.retryAfterSeconds} 秒后再试`,
+            code: "SITE_REQUEST_RATE_LIMITED",
+            retryAfterSeconds: limit.retryAfterSeconds,
+          },
+          429,
+        );
+      }
       const body = await request.json().catch(() => ({}));
       const created = await createSiteRequest(env, body);
       await recordAudit(env, {

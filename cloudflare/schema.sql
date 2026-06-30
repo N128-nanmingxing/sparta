@@ -54,9 +54,18 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   blocked_until INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS request_limits (
+  scope TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  window_started_at INTEGER NOT NULL,
+  PRIMARY KEY (scope, ip)
+);
+
 CREATE INDEX IF NOT EXISTS idx_apps_name ON apps(name);
 CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC);
 CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_request_limits_window ON request_limits(window_started_at);
