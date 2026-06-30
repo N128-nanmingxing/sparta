@@ -6,6 +6,7 @@ const loginAttemptLimit = 5;
 const loginBlockMs = 1000 * 60 * 15;
 const siteRequestWindowMs = 1000 * 60 * 10;
 const siteRequestLimit = 5;
+const adminGateTtlMs = 1000 * 60 * 60 * 8;
 const sensitiveWords = ["赌博", "博彩", "色情", "私服", "外挂", "破解", "破解版", "非法", "病毒", "盗版", "洗钱"];
 const correctionMap = new Map([
   ["微心", "微信"],
@@ -227,6 +228,16 @@ function makeText(text, status = 200, extraHeaders = {}) {
       ...extraHeaders,
     },
   });
+}
+
+function getAdminGateKey(env) {
+  return String(env.ADMIN_GATE_KEY || env.ADMIN_PASSWORD || "").trim();
+}
+
+function buildAdminGateCookie(verified) {
+  const value = verified ? "1" : "";
+  const maxAge = verified ? adminGateTtlMs / 1000 : 0;
+  return [`sparta_admin_gate=${value}`, "Path=/", "HttpOnly", "SameSite=Strict", "Secure", `Max-Age=${maxAge}`].join("; ");
 }
 
 function parseCookies(request) {
@@ -621,6 +632,12 @@ function requireCsrfToken(request, session) {
   return Boolean(token && session?.csrfToken && safeEquals(token, session.csrfToken));
 }
 
+function hasAdminGateAccess(env, request) {
+  const gateKey = getAdminGateKey(env);
+  if (!gateKey) return false;
+  return parseCookies(request).sparta_admin_gate === "1";
+}
+
 async function getOpsStatus(env) {
   const counts = await env.DB.prepare(`
     SELECT
@@ -873,6 +890,36 @@ async function handleApiRequest(context) {
   }
 
   await ensureSchema(env);
+
+  if (method === "GET" && pathname === "/api/admin/gate") {
+    return makeJson({
+      configured: Boolean(getAdminGateKey(env)),
+      verified: hasAdminGateAccess(env, request),
+    });
+  }
+
+  if (method === "POST" && pathname === "/api/admin/gate") {
+    const gateKey = getAdminGateKey(env);
+    if (!gateKey) {
+      return makeJson({ error: "后台入口口令未配置", code: "ADMIN_GATE_NOT_CONFIGURED" }, 503);
+    }
+    const body = await request.json().catch(() => ({}));
+    const key = String(body.key || "").trim();
+    if (!safeEquals(key, gateKey)) {
+      await recordAudit(env, { request, action: "admin_gate_failure", status: "denied" });
+      return makeJson({ error: "入口口令错误" }, 401);
+    }
+    await recordAudit(env, { request, action: "admin_gate_success", status: "ok" });
+    return makeJson({ ok: true }, 200, { "Set-Cookie": buildAdminGateCookie(true) });
+  }
+
+  const isAdminApi =
+    pathname.startsWith("/api/admin") ||
+    pathname.startsWith("/api/apps") ||
+    (pathname.startsWith("/api/site-requests") && !(method === "POST" && pathname === "/api/site-requests"));
+  if (isAdminApi && !hasAdminGateAccess(env, request)) {
+    return makeJson({ error: "请先通过后台入口口令", code: "ADMIN_GATE_REQUIRED" }, 401);
+  }
 
   if (method === "GET" && pathname === "/api/admin/session") {
     const session = await getSession(env, request);

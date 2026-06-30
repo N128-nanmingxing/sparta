@@ -15,6 +15,7 @@ const host = process.env.HOST || "127.0.0.1";
 const isProduction = process.env.NODE_ENV === "production";
 const adminUsername = process.env.ADMIN_USERNAME || (isProduction ? "" : "admin");
 const adminPassword = process.env.ADMIN_PASSWORD || (isProduction ? "" : "as758521");
+const adminGateKey = process.env.ADMIN_GATE_KEY || adminPassword;
 const sessionCookieName = "sparta_admin_session";
 const sessionTtlMs = 1000 * 60 * 60 * 12;
 const loginAttemptWindowMs = 1000 * 60 * 10;
@@ -22,6 +23,7 @@ const loginAttemptLimit = 5;
 const loginBlockMs = 1000 * 60 * 15;
 const siteRequestWindowMs = 1000 * 60 * 10;
 const siteRequestLimit = 5;
+const adminGateTtlMs = 1000 * 60 * 60 * 8;
 const securityHeaders = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
@@ -954,6 +956,25 @@ function clearSessionCookie() {
   return parts.join("; ");
 }
 
+function buildAdminGateCookie(verified) {
+  const parts = [
+    `sparta_admin_gate=${verified ? "1" : ""}`,
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Strict",
+    `Max-Age=${verified ? adminGateTtlMs / 1000 : 0}`,
+  ];
+  if (isProduction) {
+    parts.push("Secure");
+  }
+  return parts.join("; ");
+}
+
+function hasAdminGateAccess(request) {
+  if (!adminGateKey) return false;
+  return parseCookies(request).sparta_admin_gate === "1";
+}
+
 function sendJson(response, status, payload, headers = {}) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -1141,6 +1162,10 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/admin/session") {
+    if (!hasAdminGateAccess(request)) {
+      sendJson(response, 401, { error: "请先通过后台入口口令", code: "ADMIN_GATE_REQUIRED" });
+      return true;
+    }
     const session = getSession(request);
     sendJson(response, 200, {
       authenticated: Boolean(session),
@@ -1148,6 +1173,44 @@ async function handleApi(request, response, url) {
       csrfToken: session?.csrfToken || "",
       credentialsReady: credentialsReady(),
     });
+    return true;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/admin/gate") {
+    sendJson(response, 200, {
+      configured: Boolean(adminGateKey),
+      verified: hasAdminGateAccess(request),
+    });
+    return true;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/admin/gate") {
+    if (!adminGateKey) {
+      sendJson(response, 503, { error: "后台入口口令未配置", code: "ADMIN_GATE_NOT_CONFIGURED" });
+      return true;
+    }
+    try {
+      const body = JSON.parse(await readBody(request));
+      const key = String(body.key || "").trim();
+      if (!safeEquals(key, adminGateKey)) {
+        recordAudit("admin_gate_failure", { request, status: "denied" });
+        sendJson(response, 401, { error: "入口口令错误" });
+        return true;
+      }
+      recordAudit("admin_gate_success", { request, status: "ok" });
+      sendJson(response, 200, { ok: true }, { "Set-Cookie": buildAdminGateCookie(true) });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || "入口验证失败" });
+    }
+    return true;
+  }
+
+  const isAdminApi =
+    url.pathname.startsWith("/api/admin") ||
+    url.pathname.startsWith("/api/apps") ||
+    (url.pathname.startsWith("/api/site-requests") && !(request.method === "POST" && url.pathname === "/api/site-requests"));
+  if (isAdminApi && !hasAdminGateAccess(request)) {
+    sendJson(response, 401, { error: "请先通过后台入口口令", code: "ADMIN_GATE_REQUIRED" });
     return true;
   }
 

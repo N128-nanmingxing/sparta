@@ -15,6 +15,11 @@ const fields = {
 
 const authShell = document.querySelector("#authShell");
 const adminContent = document.querySelector("#adminContent");
+const gatePanel = document.querySelector("#gatePanel");
+const gateForm = document.querySelector("#gateForm");
+const gateKey = document.querySelector("#gateKey");
+const gateMessage = document.querySelector("#gateMessage");
+const loginPanel = document.querySelector("#loginPanel");
 const loginForm = document.querySelector("#loginForm");
 const loginUsername = document.querySelector("#loginUsername");
 const loginPassword = document.querySelector("#loginPassword");
@@ -86,6 +91,7 @@ let apps = [];
 let siteRequests = [];
 let currentSession = null;
 let csrfToken = "";
+let gateVerified = false;
 
 function setMessage(node, message, type = "ok") {
   node.textContent = message;
@@ -314,6 +320,10 @@ function showAuthScreen() {
   adminContent.hidden = true;
   currentSession = null;
   csrfToken = "";
+  if (gatePanel && loginPanel) {
+    gatePanel.hidden = gateVerified;
+    loginPanel.hidden = !gateVerified;
+  }
 }
 
 function showAdminContent(session) {
@@ -460,6 +470,11 @@ async function api(path, options = {}) {
     payload = { error: responseText };
   }
   if (response.status === 401) {
+    if (payload.code === "ADMIN_GATE_REQUIRED") {
+      gateVerified = false;
+      showAuthScreen();
+      throw new Error(payload.error || "请先通过后台入口口令");
+    }
     showAuthScreen();
     throw new Error(payload.error || "登录状态已失效，请重新登录");
   }
@@ -467,6 +482,22 @@ async function api(path, options = {}) {
     throw new Error(payload.error || `请求失败（HTTP ${response.status}）`);
   }
   return payload;
+}
+
+async function ensureGate() {
+  try {
+    const payload = await api("/api/admin/gate", {
+      headers: {},
+    });
+    gateVerified = Boolean(payload.verified);
+    showAuthScreen();
+    return gateVerified;
+  } catch (error) {
+    gateVerified = false;
+    showAuthScreen();
+    setMessage(gateMessage, error.message, "error");
+    return false;
+  }
 }
 
 async function ensureSession() {
@@ -976,6 +1007,27 @@ loginForm.addEventListener("submit", async (event) => {
   }
 });
 
+gateForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setMessage(gateMessage, "正在验证...", "info");
+  try {
+    await api("/api/admin/gate", {
+      method: "POST",
+      body: JSON.stringify({
+        key: gateKey.value.trim(),
+      }),
+    });
+    gateKey.value = "";
+    gateVerified = true;
+    showAuthScreen();
+    setMessage(loginMessage, "入口验证通过，请登录后台", "info");
+  } catch (error) {
+    gateVerified = false;
+    showAuthScreen();
+    setMessage(gateMessage, error.message, "error");
+  }
+});
+
 logoutButton.addEventListener("click", async () => {
   try {
     await api("/api/admin/logout", {
@@ -1042,6 +1094,8 @@ backupButton.addEventListener("click", async () => {
 
 async function initAdmin() {
   syncReviewControls();
+  const gateReady = await ensureGate();
+  if (!gateReady) return;
   const hasSession = await ensureSession();
   if (hasSession) {
     await loadApps();

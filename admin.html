@@ -5,12 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f6faf7" />
     <title>地址信息库后台</title>
-    <link rel="stylesheet" href="/assets/styles.css?v=20260630-layout8" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260630-layout9" />
   </head>
   <body class="admin-page">
     <main class="admin-shell">
       <section class="admin-auth-shell" id="authShell">
-        <section class="admin-panel admin-auth-panel">
+        <section class="admin-panel admin-auth-panel" id="gatePanel">
+          <div>
+            <span class="admin-kicker">后台入口</span>
+            <h1>入口验证</h1>
+            <p>通过入口口令后才能进入管理员登录。</p>
+          </div>
+          <form class="app-form" id="gateForm">
+            <label>
+              <span>入口口令</span>
+              <input id="gateKey" type="password" autocomplete="current-password" placeholder="请输入后台入口口令" />
+            </label>
+            <button class="primary-admin-button" type="submit">进入后台</button>
+            <p class="admin-message" id="gateMessage" role="status"></p>
+          </form>
+        </section>
+        <section class="admin-panel admin-auth-panel" id="loginPanel" hidden>
           <div>
             <span class="admin-kicker">受保护后台</span>
             <h1>管理员登录</h1>
