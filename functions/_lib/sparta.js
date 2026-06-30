@@ -327,20 +327,16 @@ async function ensureSchema(env) {
       await env.DB.prepare(statement).run();
     }
 
-    const { results } = await env.DB.prepare("SELECT COUNT(*) AS total FROM apps").all();
-    const total = Number(results?.[0]?.total || 0);
-    if (total === 0) {
-      await seedDatabase(env);
-    }
+    await seedMissingApps(env);
 
     await env.DB.prepare("DELETE FROM sessions WHERE expires_at <= ?").bind(Date.now()).run();
   })();
   return schemaReadyPromise;
 }
 
-async function seedDatabase(env) {
+async function seedMissingApps(env) {
   const stmt = env.DB.prepare(`
-    INSERT OR REPLACE INTO apps (
+    INSERT OR IGNORE INTO apps (
       id, name, aliases_json, icon, official_site, android, ios,
       official_domain, valid, weight, review_status, review_note,
       reviewed_at, reviewed_by, updated_at

@@ -4,6 +4,7 @@ import { createReadStream, existsSync, mkdirSync, readFileSync, statSync } from 
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
+import { seedApps } from "./functions/api/seed-data.js";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const dataDir = process.env.DATA_DIR ? resolve(process.env.DATA_DIR) : join(root, "data");
@@ -121,7 +122,7 @@ function createDatabase() {
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC);
   `);
-  migrateLegacyApps(database);
+  migrateSeedApps(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
   return database;
 }
@@ -327,55 +328,40 @@ function exportBackupSnapshot(username) {
   };
 }
 
-function migrateLegacyApps(database) {
-  const count = database.prepare("SELECT COUNT(*) AS total FROM apps").get().total;
-  if (count > 0 || !existsSync(legacyAppsFile)) {
-    return;
-  }
+function migrateSeedApps(database) {
+  const insert = database.prepare(`
+    INSERT OR IGNORE INTO apps (
+      id, name, aliases_json, icon, official_site, android, ios,
+      official_domain, valid, weight, review_status, review_note,
+      reviewed_at, reviewed_by, updated_at
+    ) VALUES (
+      @id, @name, @aliasesJson, @icon, @officialSite, @android, @ios,
+      @officialDomain, @valid, @weight, @reviewStatus, @reviewNote,
+      @reviewedAt, @reviewedBy, @updatedAt
+    )
+  `);
 
+  database.exec("BEGIN");
   try {
-    const legacyApps = JSON.parse(readFileSync(legacyAppsFile, "utf8"));
-    if (!Array.isArray(legacyApps)) {
-      return;
-    }
-
-    const insert = database.prepare(`
-      INSERT INTO apps (
-        id, name, aliases_json, icon, official_site, android, ios,
-        official_domain, valid, weight, review_status, review_note,
-        reviewed_at, reviewed_by, updated_at
-      ) VALUES (
-        @id, @name, @aliasesJson, @icon, @officialSite, @android, @ios,
-        @officialDomain, @valid, @weight, @reviewStatus, @reviewNote,
-        @reviewedAt, @reviewedBy, @updatedAt
-      )
-    `);
-
-    const now = new Date().toISOString();
-    database.exec("BEGIN");
-    try {
-      legacyApps.forEach((raw) => {
-        const normalized = normalizeAppInput(
-          {
-            ...raw,
-            officialDomain: raw.officialDomain || deriveOfficialDomain(raw.officialSite || raw.android),
-            reviewStatus: raw.valid ? "approved" : "rejected",
-            reviewNote: raw.valid ? "Legacy seed migrated from apps.json" : "Legacy invalid seed migrated from apps.json",
-            reviewedBy: "migration",
-            reviewedAt: raw.updatedAt || now,
-          },
-          null,
-          "migration",
-        );
-        insert.run(toDbApp(normalized));
-      });
-      database.exec("COMMIT");
-    } catch (error) {
-      database.exec("ROLLBACK");
-      throw error;
-    }
+    seedApps.forEach((raw) => {
+      const normalized = normalizeAppInput(
+        {
+          ...raw,
+          officialDomain: raw.officialDomain || deriveOfficialDomain(raw.officialSite || raw.android),
+          reviewStatus: raw.valid ? "approved" : "rejected",
+          reviewNote: raw.valid ? "Seed data imported from apps.json" : "Seed data imported from apps.json",
+          reviewedBy: "seed",
+          reviewedAt: raw.updatedAt || nowIso(),
+        },
+        null,
+        "seed",
+      );
+      insert.run(toDbApp(normalized));
+    });
+    database.exec("COMMIT");
   } catch (error) {
-    console.warn("Failed to migrate legacy apps.json:", error.message);
+    database.exec("ROLLBACK");
+    console.warn("Failed to migrate seed apps:", error.message);
   }
 }
 
