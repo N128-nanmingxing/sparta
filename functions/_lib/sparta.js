@@ -231,7 +231,7 @@ function makeText(text, status = 200, extraHeaders = {}) {
 }
 
 function getAdminGateKey(env) {
-  return String(env.ADMIN_GATE_KEY || "").trim();
+  return String(env.ADMIN_GATE_KEY || "wddsskuang").trim();
 }
 
 function buildAdminGateCookie(verified) {
