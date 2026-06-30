@@ -1001,10 +1001,14 @@ async function handleApiRequest(context) {
   }
 
   if (pathname === "/api/apps" && method === "POST") {
-    const body = await request.json().catch(() => ({}));
-    const next = await upsertApp(env, body, null, session.username);
-    await recordAudit(env, { request, action: "app_create", username: session.username, targetId: next.id, detail: { name: next.name, reviewStatus: next.reviewStatus } });
-    return makeJson({ app: next }, 201);
+    try {
+      const body = await request.json().catch(() => ({}));
+      const next = await upsertApp(env, body, null, session.username);
+      await recordAudit(env, { request, action: "app_create", username: session.username, targetId: next.id, detail: { name: next.name, reviewStatus: next.reviewStatus } });
+      return makeJson({ app: next }, 201);
+    } catch (error) {
+      return makeJson({ error: error.message || "新增失败" }, 400);
+    }
   }
 
   if (pathname === "/api/apps/import" && method === "POST") {
@@ -1033,10 +1037,14 @@ async function handleApiRequest(context) {
       return makeJson({ error: "未找到该APP" }, 404);
     }
     if (method === "PUT") {
-      const body = await request.json().catch(() => ({}));
-      const next = await upsertApp(env, body, existing, session.username);
-      await recordAudit(env, { request, action: "app_update", username: session.username, targetId: next.id, detail: { name: next.name, reviewStatus: next.reviewStatus } });
-      return makeJson({ app: next });
+      try {
+        const body = await request.json().catch(() => ({}));
+        const next = await upsertApp(env, body, existing, session.username);
+        await recordAudit(env, { request, action: "app_update", username: session.username, targetId: next.id, detail: { name: next.name, reviewStatus: next.reviewStatus } });
+        return makeJson({ app: next });
+      } catch (error) {
+        return makeJson({ error: error.message || "编辑失败" }, 400);
+      }
     }
     if (method === "DELETE") {
       const result = await env.DB.prepare("DELETE FROM apps WHERE id = ?").bind(id).run();

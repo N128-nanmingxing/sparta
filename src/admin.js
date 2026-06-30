@@ -452,13 +452,19 @@ async function api(path, options = {}) {
     credentials: "same-origin",
     ...options,
   });
-  const payload = await response.json().catch(() => ({}));
+  const responseText = await response.text();
+  let payload = {};
+  try {
+    payload = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    payload = { error: responseText };
+  }
   if (response.status === 401) {
     showAuthScreen();
     throw new Error(payload.error || "登录状态已失效，请重新登录");
   }
   if (!response.ok) {
-    throw new Error(payload.error || "请求失败");
+    throw new Error(payload.error || `请求失败（HTTP ${response.status}）`);
   }
   return payload;
 }
