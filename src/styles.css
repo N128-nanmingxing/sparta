@@ -1115,7 +1115,8 @@ input:focus-visible {
 }
 
 .admin-content[hidden],
-.admin-auth-shell[hidden] {
+.admin-auth-shell[hidden],
+.admin-panel[hidden] {
   display: none;
 }
 
@@ -1200,6 +1201,27 @@ input:focus-visible {
 .app-form select {
   height: 44px;
   padding: 0 13px;
+}
+
+.password-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-field input {
+  min-width: 0;
+}
+
+.password-field button {
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--green-dark);
+  background: var(--green-soft);
+  font-size: 13px;
+  font-weight: 780;
 }
 
 .app-form input:focus,

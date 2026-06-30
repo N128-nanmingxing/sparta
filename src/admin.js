@@ -18,6 +18,7 @@ const adminContent = document.querySelector("#adminContent");
 const gatePanel = document.querySelector("#gatePanel");
 const gateForm = document.querySelector("#gateForm");
 const gateKey = document.querySelector("#gateKey");
+const gateKeyToggle = document.querySelector("#gateKeyToggle");
 const gateMessage = document.querySelector("#gateMessage");
 const loginPanel = document.querySelector("#loginPanel");
 const loginForm = document.querySelector("#loginForm");
@@ -1009,6 +1010,11 @@ loginForm.addEventListener("submit", async (event) => {
 
 gateForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!gateKey.value.trim()) {
+    setMessage(gateMessage, "请输入入口口令", "error");
+    gateKey.focus();
+    return;
+  }
   setMessage(gateMessage, "正在验证...", "info");
   try {
     await api("/api/admin/gate", {
@@ -1026,6 +1032,22 @@ gateForm.addEventListener("submit", async (event) => {
     showAuthScreen();
     setMessage(gateMessage, error.message, "error");
   }
+});
+
+gateKey.addEventListener("input", () => {
+  if (gateKey.value) {
+    setMessage(gateMessage, "已输入入口口令，可以点击进入后台", "info");
+    return;
+  }
+  setMessage(gateMessage, "");
+});
+
+gateKeyToggle.addEventListener("click", () => {
+  const shouldShow = gateKey.type === "password";
+  gateKey.type = shouldShow ? "text" : "password";
+  gateKeyToggle.textContent = shouldShow ? "隐藏" : "显示";
+  gateKeyToggle.setAttribute("aria-pressed", String(shouldShow));
+  gateKey.focus();
 });
 
 logoutButton.addEventListener("click", async () => {
