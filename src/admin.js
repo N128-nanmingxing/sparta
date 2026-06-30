@@ -400,7 +400,8 @@ function resetForm() {
   appForm.reset();
   fields.id.value = "";
   fields.weight.value = "50";
-  fields.reviewStatus.value = "pending";
+  fields.reviewStatus.value = "approved";
+  fields.reviewNote.value = "人工核验官方域名后添加";
   syncReviewControls();
   formTitle.textContent = "新增 APP 地址";
   setMessage(formMessage, "");
