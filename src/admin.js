@@ -273,9 +273,28 @@ function getSkippedImportSummary(skipped) {
 function looksLikeCsv(text) {
   const firstLine = text
     .split(/\r?\n/g)
-    .map((line) => line.trim())
+    .map((line) => line.trim().replace(/^\uFEFF/, ""))
     .find(Boolean);
-  return Boolean(firstLine && firstLine.toLowerCase().startsWith("name,"));
+  if (!firstLine || !firstLine.includes(",")) return false;
+
+  const knownHeaders = new Set([
+    "name",
+    "aliases",
+    "icon",
+    "officialSite",
+    "android",
+    "ios",
+    "officialDomain",
+    "valid",
+    "weight",
+    "reviewStatus",
+    "reviewNote",
+  ]);
+
+  return firstLine
+    .split(",")
+    .map((cell) => cell.trim())
+    .some((cell) => knownHeaders.has(cell));
 }
 
 function getReviewLabel(status) {

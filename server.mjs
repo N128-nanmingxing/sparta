@@ -1510,15 +1510,15 @@ function fileForUrl(url) {
   if (pathname.startsWith("/assets/")) {
     const assetName = pathname.slice("/assets/".length);
     const sourceCandidates = [
-      join(root, "dist", "assets", assetName),
       join(root, "src", assetName),
+      join(root, "dist", "assets", assetName),
     ];
     for (const candidate of sourceCandidates) {
       if (existsSync(candidate) && statSync(candidate).isFile()) {
         return candidate;
       }
     }
-    return join(root, "index.html");
+    return null;
   }
   const normalizedPath = normalize(pathname).replace(/^(\.\.[/\\])+/, "");
   const requested = normalizedPath === "/" ? "/index.html" : normalizedPath;
@@ -1529,7 +1529,11 @@ function fileForUrl(url) {
 function serveStatic(response, url) {
   const filePath = fileForUrl(url);
   const fallbackPath = join(root, "index.html");
-  const target = existsSync(filePath) && statSync(filePath).isFile() ? filePath : fallbackPath;
+  if (!filePath && url.pathname.startsWith("/assets/")) {
+    sendText(response, 404, "Not Found");
+    return;
+  }
+  const target = filePath && existsSync(filePath) && statSync(filePath).isFile() ? filePath : fallbackPath;
   const ext = extname(target);
   response.writeHead(200, {
     "Content-Type": mimeTypes[ext] || "application/octet-stream",

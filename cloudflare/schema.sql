@@ -36,6 +36,17 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS site_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  website TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  contact TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'new',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS login_attempts (
   ip TEXT PRIMARY KEY,
   failures INTEGER NOT NULL DEFAULT 0,
@@ -48,3 +59,4 @@ CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC);
 CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC);

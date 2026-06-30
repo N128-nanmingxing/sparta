@@ -112,6 +112,7 @@ function renderInitial() {
     createElement("div", { className: "empty-mark", text: "查" }),
     createElement("h3", { text: "输入APP名称，查询已审核官方地址" }),
     createElement("p", { text: "仅展示通过后台审核的官网与官方下载地址。" }),
+    createElement("p", { className: "promise-line", text: "这里有你想要的" }),
   );
   wrapper.appendChild(inner);
   elements.state.appendChild(wrapper);
