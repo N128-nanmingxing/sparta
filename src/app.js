@@ -41,6 +41,11 @@ function track(eventName, payload = {}) {
   console.info("[prototype-track]", eventName, payload);
 }
 
+function trackVisit() {
+  if (!hasBackend) return;
+  fetch("/api/metrics/visit", { method: "POST" }).catch(() => {});
+}
+
 function cleanQuery(value) {
   return String(value || "")
     .trim()
@@ -487,6 +492,7 @@ window.addEventListener("keydown", (event) => {
 
 renderInitial();
 updateClearButton();
+trackVisit();
 
 window.prototypeSearch = {
   search: runSearch,

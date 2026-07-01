@@ -7,6 +7,8 @@ const loginBlockMs = 1000 * 60 * 15;
 const siteRequestWindowMs = 1000 * 60 * 10;
 const siteRequestLimit = 5;
 const adminGateTtlMs = 1000 * 60 * 60 * 8;
+const visitorCookieName = "sparta_visitor_id";
+const visitorCookieTtlMs = 1000 * 60 * 60 * 24 * 365;
 const sensitiveWords = ["赌博", "博彩", "色情", "私服", "外挂", "破解", "破解版", "非法", "病毒", "盗版", "洗钱"];
 const correctionMap = new Map([
   ["微心", "微信"],
@@ -255,6 +257,65 @@ function parseCookies(request) {
   );
 }
 
+async function readSiteMetric(env, metricKey) {
+  const row = await env.DB.prepare("SELECT metric_value FROM site_metrics WHERE metric_key = ?").bind(metricKey).first();
+  return Number(row?.metric_value || 0);
+}
+
+async function writeSiteMetric(env, metricKey, metricValue) {
+  await env.DB.prepare(`
+    INSERT INTO site_metrics (metric_key, metric_value, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(metric_key) DO UPDATE SET
+      metric_value = excluded.metric_value,
+      updated_at = excluded.updated_at
+  `).bind(metricKey, Number(metricValue || 0), nowIso()).run();
+}
+
+async function bumpSiteMetric(env, metricKey, amount = 1) {
+  const current = await readSiteMetric(env, metricKey);
+  const next = current + Number(amount || 0);
+  await writeSiteMetric(env, metricKey, next);
+  return next;
+}
+
+function getVisitorCookie(request) {
+  return sanitizeText(parseCookies(request)[visitorCookieName], 120);
+}
+
+function buildVisitorCookie(value) {
+  return `${visitorCookieName}=${encodeURIComponent(value)}; Path=/; Max-Age=${Math.floor(visitorCookieTtlMs / 1000)}; SameSite=Lax`;
+}
+
+async function ensureVisitorId(request, response) {
+  const existing = getVisitorCookie(request);
+  if (existing) return existing;
+  const visitorId = crypto.randomUUID().replace(/-/g, "");
+  if (response) {
+    response.headers.set("Set-Cookie", buildVisitorCookie(visitorId));
+  }
+  return visitorId;
+}
+
+async function recordVisit(env, request, response) {
+  const isNewVisitor = !getVisitorCookie(request);
+  await ensureVisitorId(request, response);
+  await bumpSiteMetric(env, "visit_count", 1);
+  if (isNewVisitor) {
+    await bumpSiteMetric(env, "visitor_count", 1);
+  }
+}
+
+async function recordSearchEvent(env, request, response, query) {
+  const visitorId = await ensureVisitorId(request, response);
+  await env.DB.prepare(`
+    INSERT INTO search_events (query, ip, visitor_id, created_at)
+    VALUES (?, ?, ?, ?)
+  `).bind(sanitizeText(query, 60), getRequestIp(request), visitorId, nowIso()).run();
+  await bumpSiteMetric(env, "search_count", 1);
+  await bumpSiteMetric(env, `search_term:${sanitizeText(query, 60).toLowerCase()}`, 1);
+}
+
 function getRequestIp(request) {
   const forwarded = String(request.headers.get("x-forwarded-for") || "")
     .split(",")[0]
@@ -325,6 +386,18 @@ async function ensureSchema(env) {
         window_started_at INTEGER NOT NULL,
         PRIMARY KEY (scope, ip)
       )`,
+      `CREATE TABLE IF NOT EXISTS site_metrics (
+        metric_key TEXT PRIMARY KEY,
+        metric_value INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS search_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        query TEXT NOT NULL,
+        ip TEXT NOT NULL DEFAULT '',
+        visitor_id TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL
+      )`,
       `CREATE TABLE IF NOT EXISTS site_requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -342,6 +415,7 @@ async function ensureSchema(env) {
       "CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC)",
       "CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC)",
       "CREATE INDEX IF NOT EXISTS idx_request_limits_window ON request_limits(window_started_at)",
+      "CREATE INDEX IF NOT EXISTS idx_search_events_created_at ON search_events(created_at DESC)",
     ];
 
     for (const statement of schemaStatements) {
@@ -651,6 +725,16 @@ async function getOpsStatus(env) {
   const activeSessions = await env.DB.prepare("SELECT COUNT(*) AS total FROM sessions WHERE expires_at > ?").bind(Date.now()).first();
   const lastBackup = await env.DB.prepare(`SELECT created_at FROM audit_logs WHERE action = 'backup_export' AND status = 'ok' ORDER BY id DESC LIMIT 1`).first();
   const recent = await env.DB.prepare(`SELECT * FROM audit_logs ORDER BY id DESC LIMIT 10`).all();
+  const visitCount = await readSiteMetric(env, "visit_count");
+  const visitorCount = await readSiteMetric(env, "visitor_count");
+  const searchCount = await readSiteMetric(env, "search_count");
+  const topSearches = await env.DB.prepare(`
+    SELECT metric_key, metric_value
+    FROM site_metrics
+    WHERE metric_key LIKE 'search_term:%'
+    ORDER BY metric_value DESC, metric_key ASC
+    LIMIT 5
+  `).all();
   return {
     environment: "cloudflare",
     credentialsReady: Boolean(env.ADMIN_USERNAME && env.ADMIN_PASSWORD),
@@ -663,8 +747,15 @@ async function getOpsStatus(env) {
       rejected: Number(counts?.rejected || 0),
       auditCount: Number(auditCount?.total || 0),
       activeSessions: Number(activeSessions?.total || 0),
+      visitCount,
+      visitorCount,
+      searchCount,
     },
     lastBackupAt: lastBackup?.created_at || "",
+    topSearches: (topSearches.results || []).map((row) => ({
+      query: String(row.metric_key || "").replace(/^search_term:/, ""),
+      count: Number(row.metric_value || 0),
+    })),
     recentAudits: (recent.results || []).map((row) => ({
       id: row.id,
       action: row.action,
@@ -988,7 +1079,14 @@ async function handleApiRequest(context) {
     if (containsSensitive(query)) {
       return makeJson({ blocked: true, results: [] });
     }
+    await recordSearchEvent(env, request, null, query);
     return makeJson({ results: await searchApps(env, query) });
+  }
+
+  if (method === "POST" && pathname === "/api/metrics/visit") {
+    const response = makeJson({ ok: true });
+    await recordVisit(env, request, response);
+    return response;
   }
 
   if (method === "POST" && pathname === "/api/site-requests") {

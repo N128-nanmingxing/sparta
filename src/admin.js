@@ -717,12 +717,22 @@ function renderRequestList(records = []) {
 
 function renderOpsStatus(payload) {
   clearNode(opsCards);
+  const topSearches = Array.isArray(payload.topSearches) ? payload.topSearches : [];
+  const topSearchText = topSearches.length
+    ? topSearches
+        .map((item) => `${item.query || "未知"} ${Number(item.count || 0)}`)
+        .join(" · ")
+    : "暂无热词";
   [
     createMetricCard("运行环境", payload.environment === "production" ? "生产" : "开发"),
     createMetricCard("总记录数", String(payload.counts?.total ?? 0)),
     createMetricCard("已通过", String(payload.counts?.approved ?? 0)),
     createMetricCard("待审核", String(payload.counts?.pending ?? 0)),
     createMetricCard("已驳回", String(payload.counts?.rejected ?? 0)),
+    createMetricCard("访问次数", String(payload.counts?.visitCount ?? 0), "首页访问累计"),
+    createMetricCard("访客数", String(payload.counts?.visitorCount ?? 0), "去重访客累计"),
+    createMetricCard("搜索次数", String(payload.counts?.searchCount ?? 0), "搜索提交累计"),
+    createMetricCard("热门搜索", topSearchText, "最近统计到的搜索词"),
     createMetricCard("活跃会话", String(payload.counts?.activeSessions ?? 0)),
     createMetricCard("审计条数", String(payload.counts?.auditCount ?? 0)),
     createMetricCard(

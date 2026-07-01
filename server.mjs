@@ -24,6 +24,8 @@ const loginBlockMs = 1000 * 60 * 15;
 const siteRequestWindowMs = 1000 * 60 * 10;
 const siteRequestLimit = 5;
 const adminGateTtlMs = 1000 * 60 * 60 * 8;
+const visitorCookieName = "sparta_visitor_id";
+const visitorCookieTtlMs = 1000 * 60 * 60 * 24 * 365;
 const securityHeaders = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
@@ -126,6 +128,18 @@ function createDatabase() {
       window_started_at INTEGER NOT NULL,
       PRIMARY KEY (scope, ip)
     );
+    CREATE TABLE IF NOT EXISTS site_metrics (
+      metric_key TEXT PRIMARY KEY,
+      metric_value INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS search_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      query TEXT NOT NULL,
+      ip TEXT NOT NULL DEFAULT '',
+      visitor_id TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_apps_name ON apps(name);
     CREATE INDEX IF NOT EXISTS idx_apps_weight ON apps(weight DESC);
     CREATE INDEX IF NOT EXISTS idx_apps_review_status ON apps(review_status);
@@ -133,6 +147,7 @@ function createDatabase() {
     CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_site_requests_created_at ON site_requests(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_request_limits_window ON request_limits(window_started_at);
+    CREATE INDEX IF NOT EXISTS idx_search_events_created_at ON search_events(created_at DESC);
   `);
   migrateSeedApps(database);
   database.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
@@ -226,6 +241,69 @@ function getLastBackupAudit() {
   return row ? parseAuditRow(row) : null;
 }
 
+function readSiteMetric(metricKey) {
+  const row = db.prepare("SELECT metric_value FROM site_metrics WHERE metric_key = ?").get(metricKey);
+  return Number(row?.metric_value || 0);
+}
+
+function writeSiteMetric(metricKey, metricValue) {
+  db.prepare(`
+    INSERT INTO site_metrics (metric_key, metric_value, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(metric_key) DO UPDATE SET
+      metric_value = excluded.metric_value,
+      updated_at = excluded.updated_at
+  `).run(metricKey, Number(metricValue || 0), nowIso());
+}
+
+function bumpSiteMetric(metricKey, amount = 1) {
+  const current = readSiteMetric(metricKey);
+  const next = current + Number(amount || 0);
+  writeSiteMetric(metricKey, next);
+  return next;
+}
+
+function getVisitorCookieValue(request) {
+  const cookies = parseCookies(request);
+  const value = sanitizeText(cookies[visitorCookieName], 120);
+  return value || "";
+}
+
+function setVisitorCookie(response, value) {
+  response.setHeader("Set-Cookie", `${visitorCookieName}=${encodeURIComponent(value)}; Path=/; Max-Age=${Math.floor(visitorCookieTtlMs / 1000)}; SameSite=Lax`);
+}
+
+function ensureVisitorId(request, response) {
+  const existing = getVisitorCookieValue(request);
+  if (existing) return existing;
+  const visitorId = randomBytes(16).toString("hex");
+  if (response && !response.headersSent) {
+    setVisitorCookie(response, visitorId);
+  }
+  return visitorId;
+}
+
+function recordSearchEvent(request, response, query) {
+  const visitorId = ensureVisitorId(request, response);
+  db.prepare(`
+    INSERT INTO search_events (query, ip, visitor_id, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(sanitizeText(query, 60), getRequestIp(request), visitorId, nowIso());
+  bumpSiteMetric("search_count", 1);
+  bumpSiteMetric(`search_term:${sanitizeText(query, 60).toLowerCase()}`, 1);
+}
+
+function recordVisit(request, response) {
+  const isNewVisitor = !getVisitorCookieValue(request);
+  const visitorId = ensureVisitorId(request, response);
+  if (!visitorId) return;
+  bumpSiteMetric("visit_count", 1);
+  if (isNewVisitor) {
+    bumpSiteMetric("visitor_count", 1);
+  }
+  bumpSiteMetric(`visit_ip:${getRequestIp(request)}`, 1);
+}
+
 function parseSiteRequestRow(row) {
   return {
     id: row.id,
@@ -263,6 +341,19 @@ function getAdminOpsStatus() {
   const auditCount = db.prepare("SELECT COUNT(*) AS total FROM audit_logs").get().total;
   const activeSessions = db.prepare("SELECT COUNT(*) AS total FROM sessions WHERE expires_at > ?").get(Date.now()).total;
   const lastBackup = getLastBackupAudit();
+  const visitCount = readSiteMetric("visit_count");
+  const visitorCount = readSiteMetric("visitor_count");
+  const searchCount = readSiteMetric("search_count");
+  const topSearches = db.prepare(`
+    SELECT metric_key, metric_value
+    FROM site_metrics
+    WHERE metric_key LIKE 'search_term:%'
+    ORDER BY metric_value DESC, metric_key ASC
+    LIMIT 5
+  `).all().map((row) => ({
+    query: String(row.metric_key || "").replace(/^search_term:/, ""),
+    count: Number(row.metric_value || 0),
+  }));
 
   return {
     environment: isProduction ? "production" : "development",
@@ -280,8 +371,12 @@ function getAdminOpsStatus() {
       rejected: Number(summary.rejected || 0),
       auditCount: Number(auditCount || 0),
       activeSessions: Number(activeSessions || 0),
+      visitCount,
+      visitorCount,
+      searchCount,
     },
     lastBackupAt: lastBackup?.createdAt || "",
+    topSearches,
     recentAudits: getRecentAudits(),
   };
 }
@@ -1333,6 +1428,12 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/metrics/visit") {
+    recordVisit(request, response);
+    sendJson(response, 200, { ok: true });
+    return true;
+  }
+
   if (url.pathname.startsWith("/api/admin/ops")) {
     const session = requireAdminSession(request, response);
     if (!session) {
@@ -1444,6 +1545,7 @@ async function handleApi(request, response, url) {
       sendJson(response, 200, { blocked: true, results: [] });
       return true;
     }
+    recordSearchEvent(request, response, query);
     sendJson(response, 200, { results: findResults(query) });
     return true;
   }
