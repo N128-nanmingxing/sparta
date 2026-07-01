@@ -1813,11 +1813,13 @@ input:focus-visible {
 @media (max-width: 860px) {
   body {
     background: var(--app-bg);
+    min-height: 100dvh;
+    overflow-x: hidden;
   }
 
   .prototype-shell {
     display: block;
-    min-height: 100vh;
+    min-height: 100dvh;
     padding: 0;
   }
 
@@ -1828,11 +1830,157 @@ input:focus-visible {
   .phone {
     width: 100vw;
     min-width: 320px;
-    height: 100vh;
-    min-height: 720px;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
     border: 0;
     border-radius: 0;
     box-shadow: none;
+  }
+
+  .app-screen {
+    min-height: 100dvh;
+    height: auto;
+    padding: 0 18px 112px;
+  }
+
+  .app-header {
+    margin-top: 10px;
+    gap: 10px;
+  }
+
+  .brand-button,
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .brand-copy strong {
+    font-size: 14px;
+  }
+
+  .brand-copy span {
+    font-size: 11px;
+  }
+
+  .trust-pill {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .hero {
+    margin-top: 22px;
+  }
+
+  .hero h2 {
+    font-size: clamp(29px, 8.2vw, 34px);
+    line-height: 1.12;
+  }
+
+  .hero p {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .search-card {
+    height: 54px;
+    margin-top: 18px;
+    grid-template-columns: minmax(0, 1fr) 28px 74px;
+    padding: 0 6px 0 16px;
+    border-radius: 18px;
+  }
+
+  #searchInput {
+    height: 42px;
+    font-size: 15px;
+  }
+
+  .search-button {
+    width: 74px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .clear-button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .search-promise {
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.38;
+  }
+
+  .product-intro {
+    margin-top: 14px;
+    gap: 8px;
+  }
+
+  .intro-grid {
+    gap: 8px;
+  }
+
+  .intro-panel {
+    border-radius: 14px;
+    padding: 11px;
+  }
+
+  .intro-panel-primary {
+    padding: 12px;
+  }
+
+  .intro-grid .intro-panel {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    column-gap: 10px;
+    align-items: start;
+  }
+
+  .intro-grid .intro-icon {
+    grid-row: 1 / span 2;
+  }
+
+  .intro-grid .intro-panel h3 {
+    margin-top: 0;
+  }
+
+  .intro-kicker,
+  .intro-icon {
+    min-height: 24px;
+    font-size: 12px;
+  }
+
+  .intro-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .intro-panel h3 {
+    margin-top: 7px;
+    font-size: 14px;
+  }
+
+  .intro-panel p {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .state-region {
+    margin-top: 16px;
+  }
+
+  .empty-state,
+  .notice-state {
+    min-height: 190px;
+  }
+
+  .legal-links {
+    padding-bottom: 12px;
   }
 
   .admin-page {
@@ -1893,7 +2041,7 @@ input:focus-visible {
   }
 
   .app-screen {
-    padding: 0 16px;
+    padding: 0 16px 112px;
   }
 
   .hero h2 {
