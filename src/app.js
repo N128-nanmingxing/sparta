@@ -326,58 +326,55 @@ async function runSearch(rawQuery) {
   lastQuery = query;
   renderLoading();
   track("search_submit", { query });
+  if (!hasBackend) {
+    renderNotice({
+      type: "error",
+      mark: "库",
+      title: "请通过本地服务使用信息库功能",
+      body: "当前是 file:// 打开方式，无法连接后台。请运行本地服务后访问 http://127.0.0.1:4173。",
+    });
+    return;
+  }
 
-  window.setTimeout(async () => {
-    if (!hasBackend) {
+  if (containsSensitive(query)) {
+    renderNotice({
+      type: "sensitive",
+      mark: "禁",
+      title: "暂不支持查询该类软件，合规保护中",
+      body: "系统已拦截该关键词，不返回任何结果。",
+    });
+    track("sensitive_block", { query });
+    return;
+  }
+
+  try {
+    const results = await fetchResults(query);
+    if (results.length === 0) {
       renderNotice({
-        type: "error",
-        mark: "库",
-        title: "请通过本地服务使用信息库功能",
-        body: "当前是 file:// 打开方式，无法连接后台。请运行本地服务后访问 http://127.0.0.1:4173。",
+        type: "empty",
+        mark: "空",
+        title: "未查询到该APP的已审核官方地址",
+        body: "请更换关键词，或等待后台补充审核后再试。",
       });
+      track("empty_result", { query });
       return;
     }
-
-    if (containsSensitive(query)) {
-      renderNotice({
-        type: "sensitive",
-        mark: "禁",
-        title: "暂不支持查询该类软件，合规保护中",
-        body: "系统已拦截该关键词，不返回任何结果。",
-      });
-      track("sensitive_block", { query });
-      return;
-    }
-
-    try {
-      const results = await fetchResults(query);
-      if (results.length === 0) {
-        renderNotice({
-          type: "empty",
-          mark: "空",
-          title: "未查询到该APP的已审核官方地址",
-          body: "请更换关键词，或等待后台补充审核后再试。",
-        });
-        track("empty_result", { query });
-        return;
-      }
-      renderResults(results, query);
-    } catch {
-      renderNotice({
-        type: "error",
-        mark: "网",
-        title: "服务暂时不可用",
-        body: "当前无法连接地址信息库，请稍后重试。",
-        retry: true,
-      });
-      track("network_error", { query });
-    }
-  }, 520);
+    renderResults(results, query);
+  } catch {
+    renderNotice({
+      type: "error",
+      mark: "网",
+      title: "服务暂时不可用",
+      body: "当前无法连接地址信息库，请稍后重试。",
+      retry: true,
+    });
+    track("network_error", { query });
+  }
 }
 
 function debouncedSearch() {
   window.clearTimeout(searchTimer);
-  searchTimer = window.setTimeout(() => runSearch(elements.input.value), 300);
+  searchTimer = window.setTimeout(() => runSearch(elements.input.value), 120);
 }
 
 function updateClearButton() {
