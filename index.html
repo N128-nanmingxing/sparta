@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbfdfc" />
     <title>APP地址搜索工具</title>
     <link rel="icon" href="/assets/logo-icon.svg?v=20260701-logo1" type="image/svg+xml" />
-    <link rel="stylesheet" href="/assets/styles.css?v=20260701-logo1" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260701-intro1" />
   </head>
   <body>
     <div class="prototype-shell">
@@ -25,7 +25,7 @@
 
           <section class="hero">
             <h2>一键查 APP 官方地址</h2>
-            <p>输入软件名称，只展示企业官网与官方正规下载地址。</p>
+            <p>输入 APP 名称，帮你找到它的官网和官方下载地址。</p>
           </section>
 
           <form class="search-card" id="searchForm" autocomplete="off">
@@ -34,7 +34,32 @@
             <button class="clear-button" id="clearButton" type="button" aria-label="清空搜索内容">×</button>
             <button class="search-button" type="submit">搜索</button>
           </form>
-          <p class="search-promise">这里有你想要的</p>
+          <p class="search-promise">查 APP 官网和官方下载地址，避开广告、山寨站和盗版链接。</p>
+
+          <section class="product-intro" aria-label="产品说明">
+            <article class="intro-panel intro-panel-primary">
+              <span class="intro-kicker">它能做什么</span>
+              <h3>帮你确认真正的官方入口</h3>
+              <p>搜索 APP 名称后，只展示人工审核过的官网、安卓官方下载地址和 iOS 官方地址。</p>
+            </article>
+            <div class="intro-grid">
+              <article class="intro-panel">
+                <span class="intro-icon">审</span>
+                <h3>人工审核</h3>
+                <p>收录前先核对企业官网、官方域名和下载入口。</p>
+              </article>
+              <article class="intro-panel">
+                <span class="intro-icon">净</span>
+                <h3>结果更干净</h3>
+                <p>不展示广告页、论坛帖、第三方下载站和盗版链接。</p>
+              </article>
+              <article class="intro-panel">
+                <span class="intro-icon">补</span>
+                <h3>可以留言补充</h3>
+                <p>没有查到的 APP，可以通过网站建议提交给后台补录。</p>
+              </article>
+            </div>
+          </section>
 
           <div class="toast" id="toast" role="status" aria-live="polite"></div>
           <section class="state-region" id="stateRegion" aria-live="polite"></section>
@@ -104,6 +129,6 @@
       </aside>
     </div>
 
-    <script type="module" src="/assets/app.js?v=20260701-metrics1"></script>
+    <script type="module" src="/assets/app.js?v=20260701-intro1"></script>
   </body>
 </html>
