@@ -32,8 +32,7 @@ body {
 }
 
 body {
-  background:
-    linear-gradient(135deg, #f4f8f5 0%, #eef5f1 100%);
+  background: #f6faf7;
   color: var(--ink);
 }
 
@@ -86,7 +85,7 @@ input:focus-visible {
   border-radius: 16px;
   color: #ffffff;
   background: linear-gradient(145deg, #16a46a, #47c892);
-  box-shadow: 0 14px 32px rgba(22, 164, 106, 0.22);
+  box-shadow: 0 8px 18px rgba(22, 164, 106, 0.14);
   font-size: 28px;
   font-weight: 860;
 }
@@ -125,7 +124,7 @@ input:focus-visible {
   text-decoration: none;
   font-size: 14px;
   font-weight: 780;
-  box-shadow: 0 12px 24px rgba(18, 160, 100, 0.18);
+  box-shadow: 0 8px 18px rgba(18, 160, 100, 0.12);
 }
 
 .brief-tests {
@@ -151,8 +150,8 @@ input:focus-visible {
   overflow: hidden;
   border-radius: 34px;
   border: 1px solid rgba(29, 44, 38, 0.16);
-  box-shadow: 0 26px 70px rgba(24, 40, 34, 0.16);
-  background: linear-gradient(180deg, #fbfdfc 0%, #f7fbf8 100%);
+  box-shadow: 0 18px 44px rgba(24, 40, 34, 0.1);
+  background: #fbfdfc;
   position: relative;
 }
 
@@ -188,7 +187,7 @@ input:focus-visible {
   height: 42px;
   display: block;
   border-radius: 12px;
-  box-shadow: 0 12px 24px rgba(22, 164, 106, 0.22);
+  box-shadow: none;
   object-fit: cover;
 }
 
@@ -264,12 +263,12 @@ input:focus-visible {
   border-radius: var(--radius-md);
   border: 1px solid rgba(28, 67, 54, 0.1);
   background: #ffffff;
-  box-shadow: 0 12px 30px rgba(26, 57, 48, 0.08);
+  box-shadow: 0 8px 18px rgba(26, 57, 48, 0.05);
 }
 
 .search-card:focus-within {
   border-color: rgba(18, 160, 100, 0.45);
-  box-shadow: 0 14px 34px rgba(18, 160, 100, 0.13);
+  box-shadow: 0 10px 22px rgba(18, 160, 100, 0.1);
 }
 
 .search-promise {
@@ -299,7 +298,7 @@ input:focus-visible {
   border-radius: 999px;
   color: #ffffff;
   background: var(--green);
-  box-shadow: 0 14px 32px rgba(18, 160, 100, 0.24);
+  box-shadow: 0 8px 18px rgba(18, 160, 100, 0.16);
   font-size: 14px;
   font-weight: 780;
 }
@@ -309,9 +308,8 @@ input:focus-visible {
   padding: 16px;
   border: 1px solid rgba(28, 67, 54, 0.08);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 20px 48px rgba(26, 57, 48, 0.14);
-  backdrop-filter: blur(12px);
+  background: #ffffff;
+  box-shadow: 0 10px 26px rgba(26, 57, 48, 0.08);
 }
 
 .request-card-head {
@@ -568,7 +566,7 @@ input:focus-visible {
   border-radius: 20px;
   border: 1px solid rgba(28, 67, 54, 0.08);
   background: #ffffff;
-  box-shadow: 0 18px 42px rgba(20, 44, 36, 0.09);
+  box-shadow: 0 10px 24px rgba(20, 44, 36, 0.05);
   padding: 18px;
 }
 
@@ -788,8 +786,8 @@ input:focus-visible {
   padding: 22px 20px;
   border-radius: var(--radius-lg);
   border: 1px solid rgba(28, 67, 54, 0.08);
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 42px rgba(20, 44, 36, 0.08);
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(20, 44, 36, 0.05);
 }
 
 .legal-document h2 {
@@ -894,7 +892,7 @@ input:focus-visible {
     padding: 0 8px 0 22px;
     border-radius: 20px;
     border-color: #e4ece8;
-    box-shadow: 0 16px 38px rgba(19, 42, 34, 0.08);
+    box-shadow: 0 10px 22px rgba(19, 42, 34, 0.05);
   }
 
   .search-promise {
@@ -962,7 +960,7 @@ input:focus-visible {
     min-height: 100%;
     border-color: #e7efeb;
     border-radius: 18px;
-    box-shadow: 0 12px 30px rgba(20, 44, 36, 0.06);
+    box-shadow: 0 8px 18px rgba(20, 44, 36, 0.04);
   }
 
   .meta-line {
@@ -1015,9 +1013,7 @@ input:focus-visible {
 
 .admin-page {
   min-width: 320px;
-  background:
-    radial-gradient(circle at 10% 0%, rgba(94, 177, 139, 0.16), transparent 26%),
-    linear-gradient(135deg, #f6faf7 0%, #eef5f1 100%);
+  background: #f6faf7;
 }
 
 .admin-shell {
@@ -1126,8 +1122,8 @@ input:focus-visible {
 .admin-panel {
   border: 1px solid rgba(28, 67, 54, 0.1);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 42px rgba(20, 44, 36, 0.08);
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(20, 44, 36, 0.05);
   padding: 18px;
 }
 
@@ -1532,7 +1528,7 @@ input:focus-visible {
   color: #788982;
   border: 1px dashed #d4e1db;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.55);
+  background: #ffffff;
   font-size: 14px;
 }
 
@@ -1609,7 +1605,7 @@ input:focus-visible {
   .request-fab-panel {
     border-color: #e4ece8;
     border-radius: 8px;
-    box-shadow: 0 12px 28px rgba(20, 44, 36, 0.1);
+    box-shadow: 0 8px 18px rgba(20, 44, 36, 0.06);
   }
 
   .panel-title {
@@ -1850,7 +1846,7 @@ input:focus-visible {
     border-radius: 999px;
     color: #ffffff;
     background: var(--green);
-    box-shadow: 0 14px 32px rgba(18, 160, 100, 0.24);
+    box-shadow: 0 8px 18px rgba(18, 160, 100, 0.16);
     font-size: 15px;
     font-weight: 780;
     pointer-events: auto;
