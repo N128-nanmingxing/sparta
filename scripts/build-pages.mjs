@@ -25,6 +25,9 @@ for (const entry of entries) {
 await cp(new URL("src/styles.css", root), new URL("assets/styles.css", outDir), {
   force: true,
 });
+await cp(new URL("assets/logo-icon.svg", root), new URL("assets/logo-icon.svg", outDir), {
+  force: true,
+});
 await cp(new URL("src/app.js", root), new URL("assets/app.js", outDir), {
   force: true,
 });
