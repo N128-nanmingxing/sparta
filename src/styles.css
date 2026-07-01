@@ -186,14 +186,10 @@ input:focus-visible {
 .brand-mark {
   width: 42px;
   height: 42px;
-  display: grid;
-  place-items: center;
+  display: block;
   border-radius: 12px;
-  color: #ffffff;
-  background: linear-gradient(145deg, #16a46a, #47c892);
   box-shadow: 0 12px 24px rgba(22, 164, 106, 0.22);
-  font-size: 22px;
-  font-weight: 860;
+  object-fit: cover;
 }
 
 .brand-copy {

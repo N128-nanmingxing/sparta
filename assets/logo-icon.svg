@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="g" x1="180" y1="160" x2="844" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#15a46b"/>
+      <stop offset="1" stop-color="#67d59c"/>
+    </linearGradient>
+    <filter id="s" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="22" stdDeviation="26" flood-color="#0f7f50" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="240" fill="#f3fbf7"/>
+  <rect x="144" y="144" width="736" height="736" rx="188" fill="url(#g)" filter="url(#s)"/>
+  <circle cx="392" cy="304" r="10" fill="#fff" opacity="0.84"/>
+  <circle cx="696" cy="348" r="8" fill="#fff" opacity="0.30"/>
+  <path d="M300 374c34-50 90-76 146-70-16 42-52 74-100 86-16 4-32-1-46-16Z" fill="#e8f8ef" opacity="0.95"/>
+  <circle cx="512" cy="500" r="190" fill="#fff"/>
+  <circle cx="512" cy="500" r="190" fill="none" stroke="#14a268" stroke-width="24"/>
+  <circle cx="512" cy="500" r="138" fill="#eaf8f1"/>
+  <text x="512" y="560" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, Arial, sans-serif" font-size="130" font-weight="900" fill="#0b7648">官</text>
+  <circle cx="700" cy="682" r="24" fill="none" stroke="#14a268" stroke-width="14"/>
+  <path d="M716 698l28 28" stroke="#14a268" stroke-width="14" stroke-linecap="round"/>
+</svg>
