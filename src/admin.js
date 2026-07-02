@@ -141,7 +141,7 @@ function withImportDefaults(row) {
     ...row,
     valid: row.valid || "true",
     reviewStatus: row.reviewStatus || "approved",
-    reviewNote: row.reviewNote || "批量导入，已按官方域名核验",
+    reviewNote: row.reviewNote || "",
   };
 }
 
@@ -366,42 +366,8 @@ function validatePayload(payload, ignoreId = "") {
     return "APP标准名称不能为空";
   }
 
-  if (!payload.officialDomain) {
-    return "请填写官方主域名";
-  }
-
   if (!payload.officialSite && !payload.android && !payload.ios) {
     return "至少填写一个官网或下载地址";
-  }
-
-  if (payload.reviewStatus === "approved") {
-    if (!payload.valid) {
-      return "审核通过的记录必须标记为可对外展示";
-    }
-    if (!payload.reviewNote) {
-      return "审核通过时必须填写审核备注";
-    }
-    if (!payload.officialSite && !payload.android) {
-      return "审核通过的记录至少需要官网或安卓官方地址之一";
-    }
-  }
-
-  if (payload.reviewStatus === "rejected") {
-    if (payload.valid) {
-      return "已驳回记录不能标记为可对外展示";
-    }
-    if (!payload.reviewNote) {
-      return "驳回记录必须填写驳回原因";
-    }
-  }
-
-  if (payload.reviewStatus === "pending" && payload.valid) {
-    return "待审核记录不能标记为可对外展示";
-  }
-
-  const duplicate = isDuplicateDraft(payload, ignoreId);
-  if (duplicate) {
-    return `检测到重复记录：${duplicate.name}`;
   }
 
   return "";
@@ -412,7 +378,7 @@ function resetForm() {
   fields.id.value = "";
   fields.weight.value = "50";
   fields.reviewStatus.value = "approved";
-  fields.reviewNote.value = "人工核验官方域名后添加";
+  fields.reviewNote.value = "";
   syncReviewControls();
   formTitle.textContent = "新增 APP 地址";
   setMessage(formMessage, "");
@@ -424,16 +390,15 @@ function syncReviewControls() {
   if (status === "approved") {
     fields.valid.disabled = false;
     fields.valid.checked = true;
-    fields.reviewNote.placeholder = "记录核验依据、域名归属、发布时间等审核说明";
+    fields.reviewNote.placeholder = "可选，写给自己看的备注";
     return;
   }
 
-  fields.valid.checked = false;
-  fields.valid.disabled = true;
+  fields.valid.disabled = false;
   fields.reviewNote.placeholder =
     status === "rejected"
-      ? "请写明驳回原因，例如域名不一致、链接失效、来源不可信"
-      : "可选：记录待补充的信息或人工核验计划";
+      ? "可选，记录为什么暂不展示"
+      : "可选，记录来源或待确认事项";
 }
 
 function bindDraftValidation() {

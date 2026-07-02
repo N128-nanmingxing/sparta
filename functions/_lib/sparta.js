@@ -117,31 +117,6 @@ function deriveOfficialDomain(value) {
   return normalizeDomain(text);
 }
 
-function hostMatchesDomain(hostName, officialDomain) {
-  const host = hostName.toLowerCase();
-  return String(officialDomain || "")
-    .split(";")
-    .map((domain) => domain.trim().toLowerCase())
-    .filter(Boolean)
-    .some((domain) => host === domain || host.endsWith(`.${domain}`));
-}
-
-function validateOfficialUrl(urlValue, officialDomain, label) {
-  if (!urlValue) return;
-  const hostName = new URL(urlValue).hostname.toLowerCase();
-  if (!hostMatchesDomain(hostName, officialDomain)) {
-    throw new Error(`${label}必须使用官方域名或其子域名`);
-  }
-}
-
-function validateIosUrl(urlValue) {
-  if (!urlValue) return;
-  const hostName = new URL(urlValue).hostname.toLowerCase();
-  if (hostName !== "apps.apple.com") {
-    throw new Error("iOS官方下载地址必须使用 apps.apple.com");
-  }
-}
-
 function makeId(name) {
   const safe = String(name || "app")
     .trim()
@@ -465,36 +440,13 @@ function normalizeAppInput(input, existing = null, reviewer = "") {
   const android = normalizeUrl(input.android, "安卓官方下载地址");
   const ios = normalizeUrl(input.ios, "iOS官方下载地址");
   const officialDomain =
-    normalizeDomain(input.officialDomain) ||
-    normalizeDomain(existing?.officialDomain) ||
-    deriveOfficialDomain(officialSite || android);
-  if (!officialDomain) {
-    throw new Error("请填写官方主域名，或至少填写一个可推导域名的官网/安卓地址");
-  }
+    sanitizeText(input.officialDomain || existing?.officialDomain || deriveOfficialDomain(officialSite || android || ios), 200);
   if (!officialSite && !android && !ios) {
     throw new Error("至少填写一个官网或下载地址");
   }
   const reviewStatus = normalizeReviewStatus(input.reviewStatus, existing?.reviewStatus || "pending");
   const reviewNote = sanitizeText(input.reviewNote || existing?.reviewNote || "", 240);
   const valid = normalizeBoolean(input.valid);
-
-  if (reviewStatus === "approved") {
-    if (!valid) throw new Error("审核通过的记录必须标记为可对外展示");
-    if (!reviewNote) throw new Error("审核通过时必须填写审核备注");
-    if (!officialSite && !android) throw new Error("审核通过的记录至少需要官网或安卓官方地址之一");
-  }
-  if (reviewStatus === "rejected") {
-    if (valid) throw new Error("已驳回记录不能标记为可对外展示");
-    if (!reviewNote) throw new Error("驳回记录必须填写驳回原因");
-  }
-  if (reviewStatus === "pending" && valid) {
-    throw new Error("待审核记录不能标记为可对外展示");
-  }
-  if (reviewStatus !== "rejected") {
-    validateOfficialUrl(officialSite, officialDomain, "官方官网地址");
-    validateOfficialUrl(android, officialDomain, "安卓官方下载地址");
-    validateIosUrl(ios);
-  }
 
   const now = nowIso();
   return {
@@ -549,10 +501,7 @@ async function findDuplicate(env, app, ignoreId = "") {
 }
 
 async function assertAppValid(env, app, ignoreId = "") {
-  const duplicate = await findDuplicate(env, app, ignoreId);
-  if (duplicate) {
-    throw new Error(`存在重复记录：${duplicate.name}`);
-  }
+  return true;
 }
 
 async function recordAudit(env, { request = null, action, username = "", targetId = "", status = "ok", detail = {} }) {
